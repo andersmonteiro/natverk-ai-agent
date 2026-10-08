@@ -9,7 +9,7 @@ from mcp.client.streamable_http import streamable_http_client
 async def mcp_session(url: str, token: str | None):
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     async with httpx2.AsyncClient(headers=headers) as http_client:
-        async with streamable_http_client(url, http_client=http_client) as (read, write, _):
+        async with streamable_http_client(url, http_client=http_client) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
