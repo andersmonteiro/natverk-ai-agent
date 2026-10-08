@@ -218,7 +218,16 @@ button:focus-visible {
   margin-bottom: 16px;
 }
 
+.shards-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .login-wrap {
+  position: relative;
+  z-index: 1;
   max-width: 340px;
   margin: 15vh auto 0;
   width: 100%;
