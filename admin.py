@@ -75,6 +75,8 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             func.count(AgentAuditLog.id).label("requests"),
             func.coalesce(func.sum(AgentAuditLog.input_tokens), 0).label("input_tokens"),
             func.coalesce(func.sum(AgentAuditLog.output_tokens), 0).label("output_tokens"),
+            func.coalesce(func.sum(AgentAuditLog.cache_creation_tokens), 0).label("cache_creation_tokens"),
+            func.coalesce(func.sum(AgentAuditLog.cache_read_tokens), 0).label("cache_read_tokens"),
         )
         .filter(AgentAuditLog.created_at >= month_start)
         .group_by(AgentAuditLog.client_name)
@@ -87,7 +89,13 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "requests": row.requests,
             "input_tokens": row.input_tokens,
             "output_tokens": row.output_tokens,
-            "cost": cost_usd(row.input_tokens, row.output_tokens),
+            "cache_read_tokens": row.cache_read_tokens,
+            "cost": cost_usd(
+                row.input_tokens,
+                row.output_tokens,
+                row.cache_creation_tokens,
+                row.cache_read_tokens,
+            ),
         }
         for row in month_rows
     ]
@@ -95,7 +103,9 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     max_cost = max((u["cost"] for u in usage), default=0) or 1
 
     calls_month = sum(u["requests"] for u in usage)
-    tokens_month = sum(u["input_tokens"] + u["output_tokens"] for u in usage)
+    tokens_month = sum(
+        u["input_tokens"] + u["output_tokens"] + u["cache_read_tokens"] for u in usage
+    )
     cost_month = sum(u["cost"] for u in usage)
 
     recent = (

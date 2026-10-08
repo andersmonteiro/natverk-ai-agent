@@ -29,6 +29,8 @@ class AgentAuditLog(Base):
     response_summary = Column(Text, nullable=True)
     input_tokens = Column(Integer, nullable=False, default=0)
     output_tokens = Column(Integer, nullable=False, default=0)
+    cache_creation_tokens = Column(Integer, nullable=False, default=0)
+    cache_read_tokens = Column(Integer, nullable=False, default=0)
     duration_ms = Column(Integer, nullable=False, default=0)
     status = Column(String, nullable=False, default="ok")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

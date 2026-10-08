@@ -19,16 +19,23 @@ load_dotenv()
 
 MODEL = "claude-sonnet-5"
 MAX_TOOL_TURNS = 8
-SYSTEM_PROMPT = (
-    "Você é o assistente de rede da Natverk. Seja econômico: use sempre a "
-    "ferramenta e os filtros mais específicos e enxutos possíveis para "
-    "responder exatamente o que foi perguntado — nunca busque mais dado do "
-    "que o necessário pra essa resposta. Em particular: quando a pergunta "
-    "for só uma contagem, use countOutput=true em vez de listar os "
-    "registros; quando precisar de detalhes, passe output com só os "
-    "campos que a resposta exige (nunca output=\"extend\"); e responda de "
-    "forma direta e curta, sem listar dado que não foi pedido."
-)
+SYSTEM_PROMPT = [
+    {
+        "type": "text",
+        "text": (
+            "Você é o assistente de rede da Natverk. Seja econômico: use "
+            "sempre a ferramenta e os filtros mais específicos e enxutos "
+            "possíveis para responder exatamente o que foi perguntado — "
+            "nunca busque mais dado do que o necessário pra essa resposta. "
+            "Em particular: quando a pergunta for só uma contagem, use "
+            "countOutput=true em vez de listar os registros; quando "
+            "precisar de detalhes, passe output com só os campos que a "
+            'resposta exige (nunca output="extend"); e responda de forma '
+            "direta e curta, sem listar dado que não foi pedido."
+        ),
+        "cache_control": {"type": "ephemeral"},
+    }
+]
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=os.environ["SESSION_SECRET"])
@@ -57,10 +64,24 @@ def health():
     return {"status": "ok"}
 
 
+class Usage:
+    def __init__(self):
+        self.input_tokens = 0
+        self.output_tokens = 0
+        self.cache_creation_tokens = 0
+        self.cache_read_tokens = 0
+
+    def add(self, usage):
+        self.input_tokens += usage.input_tokens
+        self.output_tokens += usage.output_tokens
+        self.cache_creation_tokens += getattr(usage, "cache_creation_input_tokens", 0) or 0
+        self.cache_read_tokens += getattr(usage, "cache_read_input_tokens", 0) or 0
+
+
 async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
     """Runs the Claude <-> Zabbix MCP tool loop and returns
-    (final_text, input_tokens, output_tokens, tool_calls)."""
-    input_tokens = output_tokens = 0
+    (final_text, usage, tool_calls)."""
+    usage = Usage()
     tool_calls: list[dict] = []
 
     async with mcp_session(mcp_url, mcp_token) as session:
@@ -76,14 +97,13 @@ async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
                 tools=tools,
                 messages=messages,
             )
-            input_tokens += response.usage.input_tokens
-            output_tokens += response.usage.output_tokens
+            usage.add(response.usage)
 
             if response.stop_reason != "tool_use":
                 final_text = "".join(
                     b.text for b in response.content if b.type == "text"
                 )
-                return final_text, input_tokens, output_tokens, tool_calls
+                return final_text, usage, tool_calls
 
             messages.append({"role": "assistant", "content": response.content})
             tool_results = []
@@ -112,8 +132,7 @@ async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
 
         return (
             "Não consegui concluir a consulta (muitas chamadas de ferramenta em sequência).",
-            input_tokens,
-            output_tokens,
+            usage,
             tool_calls,
         )
 
@@ -126,7 +145,9 @@ async def run_plain_chat(message: str):
         messages=[{"role": "user", "content": message}],
     )
     text = "".join(b.text for b in response.content if b.type == "text")
-    return text, response.usage.input_tokens, response.usage.output_tokens
+    usage = Usage()
+    usage.add(response.usage)
+    return text, usage
 
 
 @app.post("/chat")
@@ -142,16 +163,16 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
 
     async def event_stream():
         start = time.monotonic()
-        input_tokens = output_tokens = 0
+        usage = Usage()
         status = "ok"
         tool_calls: list[dict] = []
         try:
             if mcp_url:
-                text, input_tokens, output_tokens, tool_calls = await run_with_tools(
+                text, usage, tool_calls = await run_with_tools(
                     req.message, mcp_url, mcp_token
                 )
             else:
-                text, input_tokens, output_tokens = await run_plain_chat(req.message)
+                text, usage = await run_plain_chat(req.message)
             yield f"data: {text}\n\n"
         except Exception:
             status = "error"
@@ -172,8 +193,10 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
                     tool_name=", ".join(dict.fromkeys(tool_names)) or "chat",
                     request_summary=request_summary or None,
                     response_summary=response_summary or None,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
+                    input_tokens=usage.input_tokens,
+                    output_tokens=usage.output_tokens,
+                    cache_creation_tokens=usage.cache_creation_tokens,
+                    cache_read_tokens=usage.cache_read_tokens,
                     duration_ms=duration_ms,
                     status=status,
                 )

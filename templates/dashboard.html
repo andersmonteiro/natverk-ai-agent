@@ -46,7 +46,7 @@
       <tr>
         <td>{{ u.client_name }}</td>
         <td class="mono">{{ u.requests }}</td>
-        <td class="mono">{{ (u.input_tokens + u.output_tokens) | fmt_tokens }}</td>
+        <td class="mono">{{ (u.input_tokens + u.output_tokens + u.cache_read_tokens) | fmt_tokens }}</td>
         <td>
           <div class="share-bar"><div class="share-bar-fill" style="width: {{ (u.cost / max_cost * 100) | round(0, 'floor') }}%"></div></div>
         </td>
