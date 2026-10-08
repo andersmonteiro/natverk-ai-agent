@@ -297,6 +297,7 @@ def update_client_mcp(
     client_id: int,
     zabbix_mcp_url: str = Form(""),
     zabbix_mcp_token: str = Form(""),
+    agent_tools_token: str = Form(""),
     db: Session = Depends(get_db),
 ):
     redirect = require_admin(request)
@@ -306,6 +307,7 @@ def update_client_mcp(
     if agent_client:
         agent_client.zabbix_mcp_url = zabbix_mcp_url or None
         agent_client.zabbix_mcp_token = zabbix_mcp_token or None
+        agent_client.agent_tools_token = agent_tools_token or None
         db.commit()
     return RedirectResponse(url="/admin/clients", status_code=303)
 

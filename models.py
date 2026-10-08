@@ -14,6 +14,9 @@ class AgentClient(Base):
     token_hash = Column(String, nullable=False)
     zabbix_mcp_url = Column(String, nullable=True)
     zabbix_mcp_token = Column(String, nullable=True)
+    # Token do /api/agent-tools/* do map/ desse cliente (base_url + essas
+    # rotas = as ferramentas de SSH: interfaces, rotas, BGP, log).
+    agent_tools_token = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 

@@ -10,9 +10,10 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
 import admin
+from agent_tools_bridge import AGENT_TOOLS_DEFS, call_agent_tool, is_agent_tool
 from client_auth import resolve_client
 from db import Base, SessionLocal, engine
-from mcp_bridge import mcp_result_to_text, mcp_session, mcp_tools_to_anthropic
+from mcp_bridge import mcp_result_to_text, mcp_session, mcp_tools_to_anthropic, with_cache_breakpoint
 from models import AgentAuditLog
 
 load_dotenv()
@@ -78,15 +79,25 @@ class Usage:
         self.cache_read_tokens += getattr(usage, "cache_read_input_tokens", 0) or 0
 
 
-async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
-    """Runs the Claude <-> Zabbix MCP tool loop and returns
+async def run_with_tools(
+    message: str,
+    mcp_url: str,
+    mcp_token: str | None,
+    base_url: str | None,
+    agent_tools_token: str | None,
+):
+    """Runs the Claude <-> (Zabbix MCP + agent_tools) loop and returns
     (final_text, usage, tool_calls)."""
     usage = Usage()
     tool_calls: list[dict] = []
+    has_agent_tools = bool(base_url and agent_tools_token)
 
     async with mcp_session(mcp_url, mcp_token) as session:
         mcp_tools = (await session.list_tools()).tools
         tools = mcp_tools_to_anthropic(mcp_tools)
+        if has_agent_tools:
+            tools = tools + AGENT_TOOLS_DEFS
+        tools = with_cache_breakpoint(tools)
 
         messages = [{"role": "user", "content": message}]
         for _ in range(MAX_TOOL_TURNS):
@@ -110,8 +121,15 @@ async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
             for block in response.content:
                 if block.type != "tool_use":
                     continue
-                result = await session.call_tool(block.name, block.input)
-                result_text = mcp_result_to_text(result)
+                if has_agent_tools and is_agent_tool(block.name):
+                    result_text = await call_agent_tool(
+                        base_url, agent_tools_token, block.name, block.input
+                    )
+                    is_error = result_text.startswith("Erro")
+                else:
+                    result = await session.call_tool(block.name, block.input)
+                    result_text = mcp_result_to_text(result)
+                    is_error = bool(result.is_error)
                 tool_calls.append(
                     {
                         "name": block.name,
@@ -125,7 +143,7 @@ async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
                         "type": "tool_result",
                         "tool_use_id": block.id,
                         "content": result_text,
-                        "is_error": bool(result.is_error),
+                        "is_error": is_error,
                     }
                 )
             messages.append({"role": "user", "content": tool_results})
@@ -160,6 +178,8 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
     client_name = agent_client.name
     mcp_url = agent_client.zabbix_mcp_url
     mcp_token = agent_client.zabbix_mcp_token
+    base_url = agent_client.base_url
+    agent_tools_token = agent_client.agent_tools_token
 
     async def event_stream():
         start = time.monotonic()
@@ -169,7 +189,7 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
         try:
             if mcp_url:
                 text, usage, tool_calls = await run_with_tools(
-                    req.message, mcp_url, mcp_token
+                    req.message, mcp_url, mcp_token, base_url, agent_tools_token
                 )
             else:
                 text, usage = await run_plain_chat(req.message)

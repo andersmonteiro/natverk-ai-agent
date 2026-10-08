@@ -53,6 +53,8 @@
           <input type="text" name="zabbix_mcp_url" value="{{ c.zabbix_mcp_url or '' }}" placeholder="http://IP-do-cliente:porta/mcp">
           <label>Token</label>
           <input type="text" name="zabbix_mcp_token" value="{{ c.zabbix_mcp_token or '' }}" placeholder="zmcp_...">
+          <label>Token do agent_tools (SSH)</label>
+          <input type="text" name="agent_tools_token" value="{{ c.agent_tools_token or '' }}" placeholder="AGENT_TOOLS_TOKEN da VM">
           <button type="submit" class="btn-secondary">Salvar</button>
         </form>
       </td>

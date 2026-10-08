@@ -16,13 +16,8 @@ async def mcp_session(url: str, token: str | None):
 
 
 def mcp_tools_to_anthropic(mcp_tools) -> list[dict]:
-    """Converts MCP tool definitions to Anthropic's tool format. The last
-    tool gets a cache_control breakpoint -- the whole catalog (plus the
-    system prompt, which precedes it in the request) is byte-identical on
-    every call for a given client, so Anthropic can cache it and charge
-    ~10% of the normal input price on a hit instead of resending it fresh
-    every turn."""
-    tools = [
+    """Converts MCP tool definitions to Anthropic's tool format."""
+    return [
         {
             "name": t.name,
             "description": t.description or "",
@@ -30,6 +25,14 @@ def mcp_tools_to_anthropic(mcp_tools) -> list[dict]:
         }
         for t in mcp_tools
     ]
+
+
+def with_cache_breakpoint(tools: list[dict]) -> list[dict]:
+    """Marks the last tool in the combined catalog as a cache breakpoint --
+    the whole catalog (plus the system prompt, which precedes it in the
+    request) is byte-identical on every call for a given client, so
+    Anthropic can cache it and charge ~10% of the normal input price on a
+    hit instead of resending it fresh every turn."""
     if tools:
         tools[-1] = {**tools[-1], "cache_control": {"type": "ephemeral"}}
     return tools
