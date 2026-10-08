@@ -31,6 +31,15 @@
 </div>
 
 <div class="card">
+  <h2>Volume de chamadas</h2>
+  <p class="panel-subtitle">Requisições por hora, últimas 24h (pico: {{ max_hourly }})</p>
+  <svg class="trend-chart" viewBox="0 0 {{ chart_w }} {{ chart_h }}" preserveAspectRatio="none">
+    <polygon points="{{ volume_area }}" class="trend-area"></polygon>
+    <polyline points="{{ volume_line }}" class="trend-line"></polyline>
+  </svg>
+</div>
+
+<div class="card">
   <h2>Distribuição de latência</h2>
   <p class="panel-subtitle">Duração das chamadas ao /chat, agrupadas por faixa</p>
   <div class="histogram">

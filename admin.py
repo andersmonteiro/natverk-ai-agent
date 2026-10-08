@@ -197,6 +197,22 @@ def monitoring(request: Request, db: Session = Depends(get_db)):
         )
     clients_rows.sort(key=lambda r: r["requests"], reverse=True)
 
+    now = datetime.datetime.utcnow()
+    hourly_counts = [0] * 24
+    for e in entries:
+        hours_ago = int((now - e.created_at).total_seconds() // 3600)
+        bucket = 23 - min(hours_ago, 23)
+        hourly_counts[bucket] += 1
+    max_hourly = max(hourly_counts) or 1
+    chart_w, chart_h = 760, 120
+    step = chart_w / 23
+    points = [
+        (round(i * step, 1), round(chart_h - (c / max_hourly * (chart_h - 8)), 1))
+        for i, c in enumerate(hourly_counts)
+    ]
+    volume_line = " ".join(f"{x},{y}" for x, y in points)
+    volume_area = f"0,{chart_h} " + volume_line + f" {chart_w},{chart_h}"
+
     return templates.TemplateResponse(
         "monitoring.html",
         {
@@ -207,6 +223,11 @@ def monitoring(request: Request, db: Session = Depends(get_db)):
             "p99": percentile(durations, 0.99),
             "error_rate": error_rate,
             "histogram": histogram,
+            "chart_w": chart_w,
+            "chart_h": chart_h,
+            "volume_line": volume_line,
+            "volume_area": volume_area,
+            "max_hourly": max_hourly,
             "clients_rows": clients_rows,
         },
     )

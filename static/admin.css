@@ -473,3 +473,23 @@ h2 {
   background: rgba(229, 72, 77, 0.14);
   color: var(--danger);
 }
+
+.trend-chart {
+  width: 100%;
+  height: 140px;
+  margin-top: 8px;
+  display: block;
+}
+
+.trend-area {
+  fill: rgba(237, 237, 237, 0.08);
+  stroke: none;
+}
+
+.trend-line {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
