@@ -1,13 +1,13 @@
 from contextlib import asynccontextmanager
 
 from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
 
 
 @asynccontextmanager
 async def mcp_session(url: str, token: str | None):
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    async with streamablehttp_client(url, headers=headers) as (read, write, _):
+    async with streamable_http_client(url, headers=headers) as (read, write, _):
         async with ClientSession(read, write) as session:
             await session.initialize()
             yield session
