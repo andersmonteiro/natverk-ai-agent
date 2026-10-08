@@ -59,9 +59,9 @@ def health():
 
 async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
     """Runs the Claude <-> Zabbix MCP tool loop and returns
-    (final_text, input_tokens, output_tokens, tool_names_used)."""
+    (final_text, input_tokens, output_tokens, tool_calls)."""
     input_tokens = output_tokens = 0
-    tool_names_used: list[str] = []
+    tool_calls: list[dict] = []
 
     async with mcp_session(mcp_url, mcp_token) as session:
         mcp_tools = (await session.list_tools()).tools
@@ -83,20 +83,28 @@ async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
                 final_text = "".join(
                     b.text for b in response.content if b.type == "text"
                 )
-                return final_text, input_tokens, output_tokens, tool_names_used
+                return final_text, input_tokens, output_tokens, tool_calls
 
             messages.append({"role": "assistant", "content": response.content})
             tool_results = []
             for block in response.content:
                 if block.type != "tool_use":
                     continue
-                tool_names_used.append(block.name)
                 result = await session.call_tool(block.name, block.input)
+                result_text = mcp_result_to_text(result)
+                tool_calls.append(
+                    {
+                        "name": block.name,
+                        "input": block.input,
+                        "result_chars": len(result_text),
+                        "result_preview": result_text[:300],
+                    }
+                )
                 tool_results.append(
                     {
                         "type": "tool_result",
                         "tool_use_id": block.id,
-                        "content": mcp_result_to_text(result),
+                        "content": result_text,
                         "is_error": bool(result.is_error),
                     }
                 )
@@ -106,7 +114,7 @@ async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
             "Não consegui concluir a consulta (muitas chamadas de ferramenta em sequência).",
             input_tokens,
             output_tokens,
-            tool_names_used,
+            tool_calls,
         )
 
 
@@ -136,10 +144,10 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
         start = time.monotonic()
         input_tokens = output_tokens = 0
         status = "ok"
-        tool_names_used: list[str] = []
+        tool_calls: list[dict] = []
         try:
             if mcp_url:
-                text, input_tokens, output_tokens, tool_names_used = await run_with_tools(
+                text, input_tokens, output_tokens, tool_calls = await run_with_tools(
                     req.message, mcp_url, mcp_token
                 )
             else:
@@ -150,10 +158,20 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
             raise
         finally:
             duration_ms = int((time.monotonic() - start) * 1000)
+            tool_names = [t["name"] for t in tool_calls]
+            request_summary = "\n".join(
+                f"{t['name']}({t['input']})" for t in tool_calls
+            )
+            response_summary = "\n".join(
+                f"{t['name']}: {t['result_chars']} chars -> {t['result_preview']}"
+                for t in tool_calls
+            )
             db.add(
                 AgentAuditLog(
                     client_name=client_name,
-                    tool_name=", ".join(dict.fromkeys(tool_names_used)) or "chat",
+                    tool_name=", ".join(dict.fromkeys(tool_names)) or "chat",
+                    request_summary=request_summary or None,
+                    response_summary=response_summary or None,
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
                     duration_ms=duration_ms,

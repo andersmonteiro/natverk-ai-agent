@@ -9,7 +9,7 @@
   <p class="panel-subtitle">Últimas 200 chamadas, mais recentes primeiro</p>
   {% if entries %}
   <table>
-    <tr><th>Quando</th><th>Cliente</th><th>Usuário</th><th>Ferramenta</th><th>Host</th></tr>
+    <tr><th>Quando</th><th>Cliente</th><th>Usuário</th><th>Ferramenta</th><th>Host</th><th>Tokens</th></tr>
     {% for e in entries %}
     <tr>
       <td class="mono">{{ e.created_at.strftime("%d/%m %H:%M:%S") }}</td>
@@ -17,7 +17,20 @@
       <td>{{ e.user or "—" }}</td>
       <td class="mono">{{ e.tool_name }}</td>
       <td class="mono">{{ e.target_host or "—" }}</td>
+      <td class="mono">{{ e.input_tokens }} / {{ e.output_tokens }}</td>
     </tr>
+    {% if e.request_summary or e.response_summary %}
+    <tr>
+      <td colspan="6">
+        {% if e.request_summary %}
+        <div class="audit-detail"><span>Consulta:</span> {{ e.request_summary }}</div>
+        {% endif %}
+        {% if e.response_summary %}
+        <div class="audit-detail"><span>Resposta:</span> {{ e.response_summary }}</div>
+        {% endif %}
+      </td>
+    </tr>
+    {% endif %}
     {% endfor %}
   </table>
   {% else %}

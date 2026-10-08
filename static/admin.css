@@ -240,6 +240,21 @@ button:focus-visible {
   margin-bottom: 0;
 }
 
+.audit-detail {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 6px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.audit-detail span {
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-right: 6px;
+}
+
 .inline-form button {
   background: transparent;
   color: var(--text-muted);
