@@ -152,20 +152,32 @@ label {
 input[type="text"],
 input[type="password"],
 input[type="url"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 11px 13px;
   color: var(--text);
   font-family: inherit;
   font-size: 14px;
   margin-bottom: 16px;
+  outline: none;
+  box-shadow: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-input:focus {
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="url"]:focus {
   outline: none;
-  border-color: var(--text-muted);
+  border-color: #4d4d4d;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+
+input::placeholder {
+  color: #5a5a5a;
 }
 
 button {
@@ -177,10 +189,16 @@ button {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  transition: opacity 0.15s ease;
 }
 
 button:hover {
   opacity: 0.88;
+}
+
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
 }
 
 .inline-form button {
