@@ -1,20 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Entrar — Agente Natverk{% endblock %}
 {% block content %}
-<canvas id="shards-bg" class="shards-canvas"></canvas>
 <div class="login-wrap">
   <div class="card login-card">
+    <div class="login-mark-wrap">
+      <span class="login-mark">N</span>
+    </div>
+    <p class="login-wordmark">Natverk Agente</p>
+    <div class="login-divider"></div>
     <h1>Entrar</h1>
-    <p class="subtitle">Painel de administração</p>
+    <p class="subtitle">Acesse o painel de administração</p>
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <form method="post" action="/admin/login">
       <label for="username">Usuário</label>
       <input type="text" id="username" name="username" autofocus>
       <label for="password">Senha</label>
       <input type="password" id="password" name="password" placeholder="••••••••">
-      <button type="submit">Entrar</button>
+      <button type="submit" class="btn-with-icon">
+        <svg viewBox="0 0 20 20" fill="none"><rect x="5" y="9" width="10" height="7" rx="1.2" stroke="currentColor" stroke-width="1.4"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Entrar</span>
+      </button>
     </form>
   </div>
 </div>
-<script src="/static/js/shards.js"></script>
 {% endblock %}

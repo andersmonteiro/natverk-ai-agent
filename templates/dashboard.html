@@ -61,6 +61,7 @@
 
   <div class="card panel-narrow">
     <h2>Atividade recente</h2>
+    <p class="panel-subtitle">Últimas {{ recent | length }} chamada(s), mais recentes primeiro</p>
     {% if recent %}
     <ul class="activity-list">
       {% for e in recent %}

@@ -2,7 +2,7 @@
 {% block title %}Clientes — Agente Natverk{% endblock %}
 {% block content %}
 <h1>Clientes</h1>
-<p class="subtitle">VMs de cliente autorizadas a usar o agente central</p>
+<p class="subtitle">Gerencie quais VMs de cliente podem usar o agente central</p>
 
 {% if new_token %}
 <div class="token-reveal">
@@ -12,6 +12,8 @@
 {% endif %}
 
 <div class="card">
+  <h2>Novo cliente</h2>
+  <p class="panel-subtitle">Cadastra uma VM de cliente e gera o token de acesso dela</p>
   <form method="post" action="/admin/clients">
     <label for="name">Nome do cliente</label>
     <input type="text" id="name" name="name" placeholder="ex: wnp" required>
@@ -22,6 +24,8 @@
 </div>
 
 <div class="card">
+  <h2>Clientes cadastrados</h2>
+  <p class="panel-subtitle">{{ clients | length }} cliente(s) autorizados a usar o agente central</p>
   {% if clients %}
   <table>
     <tr><th>Nome</th><th>URL</th><th>Criado em</th></tr>

@@ -2,9 +2,11 @@
 {% block title %}Auditoria — Agente Natverk{% endblock %}
 {% block content %}
 <h1>Auditoria</h1>
-<p class="subtitle">Últimas 200 chamadas de ferramenta, de todos os clientes</p>
+<p class="subtitle">Registro de todas as chamadas de ferramenta feitas por qualquer cliente</p>
 
 <div class="card">
+  <h2>Chamadas recentes</h2>
+  <p class="panel-subtitle">Últimas 200 chamadas, mais recentes primeiro</p>
   {% if entries %}
   <table>
     <tr><th>Quando</th><th>Cliente</th><th>Usuário</th><th>Ferramenta</th><th>Host</th></tr>
