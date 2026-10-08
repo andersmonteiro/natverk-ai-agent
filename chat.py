@@ -86,7 +86,7 @@ async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
                         "type": "tool_result",
                         "tool_use_id": block.id,
                         "content": mcp_result_to_text(result),
-                        "is_error": bool(result.isError),
+                        "is_error": bool(result.is_error),
                     }
                 )
             messages.append({"role": "user", "content": tool_results})
