@@ -12,8 +12,9 @@
     {% if request.session.get("is_admin") %}
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <span class="brand-mark">N</span>
-        <span>Natverk Agente</span>
+        <p class="wordmark wordmark-sm">
+          <span class="w-bold">NATVERK</span> <span class="w-light">IA AGENT</span>
+        </p>
       </div>
       <nav class="sidebar-nav">
         <a href="/admin/dashboard" class="{{ 'active' if request.url.path == '/admin/dashboard' else '' }}">
