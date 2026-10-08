@@ -14,5 +14,8 @@ def require_admin(request: Request):
     return None
 
 
-def check_password(password: str) -> bool:
-    return password == os.environ["ADMIN_PASSWORD"]
+def check_credentials(username: str, password: str) -> bool:
+    return (
+        username == os.environ["ADMIN_USERNAME"]
+        and password == os.environ["ADMIN_PASSWORD"]
+    )

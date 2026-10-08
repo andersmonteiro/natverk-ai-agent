@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from auth import check_password, require_admin
+from auth import check_credentials, require_admin
 from client_auth import hash_token
 from db import get_db
 from models import AgentAuditLog, AgentClient
@@ -41,10 +41,12 @@ def login_form(request: Request):
 
 
 @router.post("/login")
-def login_submit(request: Request, password: str = Form(...)):
-    if not check_password(password):
+def login_submit(
+    request: Request, username: str = Form(...), password: str = Form(...)
+):
+    if not check_credentials(username, password):
         return templates.TemplateResponse(
-            "login.html", {"request": request, "error": "Senha incorreta"}
+            "login.html", {"request": request, "error": "Usuário ou senha incorretos"}
         )
     request.session["is_admin"] = True
     return RedirectResponse(url="/admin/dashboard", status_code=303)
