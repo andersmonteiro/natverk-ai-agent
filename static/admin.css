@@ -222,12 +222,15 @@ button:focus-visible {
 }
 
 .login-wrap {
-  max-width: 360px;
-  margin: 13vh auto 0;
-  width: 100%;
+  min-height: calc(100vh - 96px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .login-card {
+  max-width: 360px;
+  width: 100%;
   margin-bottom: 0;
   padding: 36px 32px 32px;
 }
@@ -254,6 +257,7 @@ button:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  margin-top: 10px;
 }
 
 .btn-with-icon svg {
