@@ -1,4 +1,5 @@
 import os
+import time
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -54,6 +55,9 @@ def chat(req: ChatRequest, x_agent_token: str = Header(...)):
     client_name = agent_client.name
 
     def event_stream():
+        start = time.monotonic()
+        input_tokens = output_tokens = 0
+        status = "ok"
         try:
             with client.messages.stream(
                 model=MODEL,
@@ -63,16 +67,24 @@ def chat(req: ChatRequest, x_agent_token: str = Header(...)):
                 for text in stream.text_stream:
                     yield f"data: {text}\n\n"
                 final = stream.get_final_message()
+                input_tokens = final.usage.input_tokens
+                output_tokens = final.usage.output_tokens
+        except Exception:
+            status = "error"
+            raise
+        finally:
+            duration_ms = int((time.monotonic() - start) * 1000)
             db.add(
                 AgentAuditLog(
                     client_name=client_name,
                     tool_name="chat",
-                    input_tokens=final.usage.input_tokens,
-                    output_tokens=final.usage.output_tokens,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    duration_ms=duration_ms,
+                    status=status,
                 )
             )
             db.commit()
-        finally:
             db.close()
         yield "event: done\ndata: {}\n\n"
 

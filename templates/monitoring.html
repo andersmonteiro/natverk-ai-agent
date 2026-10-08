@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Monitoramento — Agente Natverk{% endblock %}
+{% block content %}
+<h1>Monitoramento</h1>
+<p class="subtitle">Comunicação cliente → central nas últimas 24h ({{ total }} requisições)</p>
+
+<div class="note">
+  Hoje este painel só enxerga o que chega da VM do cliente pro agente central
+  (o <code>/chat</code>). Verificar se a central consegue alcançar a VM do
+  cliente de volta (SSH / Zabbix MCP) só será possível depois que o
+  <code>agent_tools/</code> existir do lado do cliente.
+</div>
+
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label"><span>p50</span></div>
+    <div class="stat-card-value">{{ p50 }}ms</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label"><span>p90</span></div>
+    <div class="stat-card-value">{{ p90 }}ms</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label"><span>p99</span></div>
+    <div class="stat-card-value">{{ p99 }}ms</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label"><span>Taxa de erro</span></div>
+    <div class="stat-card-value {{ 'value-danger' if error_rate > 0 else '' }}">{{ "%.1f"|format(error_rate) }}%</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Distribuição de latência</h2>
+  <p class="panel-subtitle">Duração das chamadas ao /chat, agrupadas por faixa</p>
+  <div class="histogram">
+    {% for h in histogram %}
+    <div class="histogram-bar">
+      <span class="histogram-count">{{ h.count }}</span>
+      <div class="histogram-track">
+        <div class="histogram-fill {{ 'slow' if h.slow else '' }}" style="height: {{ h.height_pct }}%"></div>
+      </div>
+      <span class="histogram-label">{{ h.label }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Por cliente</h2>
+  {% if clients_rows %}
+  <table>
+    <tr><th>Cliente</th><th>Status</th><th>Requisições</th><th>p50</th><th>p90</th><th>Erro</th><th>Último contato</th></tr>
+    {% for c in clients_rows %}
+    <tr>
+      <td>{{ c.client_name }}</td>
+      <td><span class="pill pill-{{ c.health }}">{{ "Saudável" if c.health == "healthy" else ("Atenção" if c.health == "warning" else "Crítico") }}</span></td>
+      <td class="mono">{{ c.requests }}</td>
+      <td class="mono">{{ c.p50 }}ms</td>
+      <td class="mono">{{ c.p90 }}ms</td>
+      <td class="mono">{{ "%.1f"|format(c.error_rate) }}%</td>
+      <td class="mono">{{ c.last_seen.strftime("%d/%m %H:%M") }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">Nenhuma chamada nas últimas 24h.</p>
+  {% endif %}
+</div>
+{% endblock %}

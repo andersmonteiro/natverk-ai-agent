@@ -118,6 +118,100 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     )
 
 
+def percentile(sorted_values: list[int], pct: float) -> int:
+    if not sorted_values:
+        return 0
+    k = (len(sorted_values) - 1) * pct
+    f = int(k)
+    c = min(f + 1, len(sorted_values) - 1)
+    if f == c:
+        return sorted_values[f]
+    return round(sorted_values[f] + (sorted_values[c] - sorted_values[f]) * (k - f))
+
+
+HISTOGRAM_BUCKETS = [
+    (0, 200, "0-200ms"),
+    (200, 500, "200-500ms"),
+    (500, 1000, "500ms-1s"),
+    (1000, 2000, "1-2s"),
+    (2000, 5000, "2-5s"),
+    (5000, None, "5s+"),
+]
+
+
+@router.get("/monitoring")
+def monitoring(request: Request, db: Session = Depends(get_db)):
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+
+    since = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
+    entries = (
+        db.query(AgentAuditLog)
+        .filter(AgentAuditLog.created_at >= since)
+        .order_by(AgentAuditLog.created_at.asc())
+        .all()
+    )
+
+    durations = sorted(e.duration_ms for e in entries)
+    total = len(entries)
+    errors = sum(1 for e in entries if e.status == "error")
+    error_rate = (errors / total * 100) if total else 0.0
+
+    histogram = []
+    max_bucket = 1
+    for low, high, label in HISTOGRAM_BUCKETS:
+        count = sum(
+            1 for d in durations if d >= low and (high is None or d < high)
+        )
+        histogram.append({"label": label, "count": count, "slow": low >= 2000})
+        max_bucket = max(max_bucket, count)
+    for h in histogram:
+        h["height_pct"] = round(h["count"] / max_bucket * 100) if max_bucket else 0
+
+    by_client: dict[str, list[AgentAuditLog]] = {}
+    for e in entries:
+        by_client.setdefault(e.client_name, []).append(e)
+
+    clients_rows = []
+    for name, rows in by_client.items():
+        d = sorted(r.duration_ms for r in rows)
+        err = sum(1 for r in rows if r.status == "error")
+        rate = (err / len(rows) * 100) if rows else 0.0
+        if rate == 0:
+            health = "healthy"
+        elif rate <= 5:
+            health = "warning"
+        else:
+            health = "critical"
+        clients_rows.append(
+            {
+                "client_name": name,
+                "requests": len(rows),
+                "p50": percentile(d, 0.5),
+                "p90": percentile(d, 0.9),
+                "error_rate": rate,
+                "health": health,
+                "last_seen": max(r.created_at for r in rows),
+            }
+        )
+    clients_rows.sort(key=lambda r: r["requests"], reverse=True)
+
+    return templates.TemplateResponse(
+        "monitoring.html",
+        {
+            "request": request,
+            "total": total,
+            "p50": percentile(durations, 0.5),
+            "p90": percentile(durations, 0.9),
+            "p99": percentile(durations, 0.99),
+            "error_rate": error_rate,
+            "histogram": histogram,
+            "clients_rows": clients_rows,
+        },
+    )
+
+
 @router.get("/clients")
 def list_clients(request: Request, db: Session = Depends(get_db)):
     redirect = require_admin(request)
