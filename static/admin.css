@@ -213,6 +213,33 @@ button:focus-visible {
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
 }
 
+.btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-2);
+}
+
+.btn-secondary:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+  opacity: 1;
+}
+
+.mcp-edit-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 10px 0 4px;
+}
+
+.mcp-edit-form label {
+  font-size: 11px;
+}
+
+.mcp-edit-form input {
+  margin-bottom: 0;
+}
+
 .inline-form button {
   background: transparent;
   color: var(--text-muted);

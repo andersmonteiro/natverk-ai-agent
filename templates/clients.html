@@ -19,6 +19,10 @@
     <input type="text" id="name" name="name" placeholder="ex: wnp" required>
     <label for="base_url">URL base da VM do cliente</label>
     <input type="url" id="base_url" name="base_url" placeholder="https://painel.cliente.com.br" required>
+    <label for="zabbix_mcp_url">URL do Zabbix MCP Server (opcional)</label>
+    <input type="text" id="zabbix_mcp_url" name="zabbix_mcp_url" placeholder="http://IP-do-cliente:porta/mcp">
+    <label for="zabbix_mcp_token">Token do Zabbix MCP Server (opcional)</label>
+    <input type="text" id="zabbix_mcp_token" name="zabbix_mcp_token" placeholder="zmcp_...">
     <button type="submit">Adicionar cliente</button>
   </form>
 </div>
@@ -28,12 +32,30 @@
   <p class="panel-subtitle">{{ clients | length }} cliente(s) autorizados a usar o agente central</p>
   {% if clients %}
   <table>
-    <tr><th>Nome</th><th>URL</th><th>Criado em</th></tr>
+    <tr><th>Nome</th><th>URL</th><th>Zabbix MCP</th><th>Criado em</th></tr>
     {% for c in clients %}
     <tr>
       <td>{{ c.name }}</td>
       <td class="mono">{{ c.base_url }}</td>
+      <td>
+        {% if c.zabbix_mcp_url %}
+        <span class="pill pill-healthy">Configurado</span>
+        {% else %}
+        <span class="pill pill-warning">Não configurado</span>
+        {% endif %}
+      </td>
       <td>{{ c.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+    </tr>
+    <tr>
+      <td colspan="4">
+        <form method="post" action="/admin/clients/{{ c.id }}/mcp" class="mcp-edit-form">
+          <label>URL do Zabbix MCP Server</label>
+          <input type="text" name="zabbix_mcp_url" value="{{ c.zabbix_mcp_url or '' }}" placeholder="http://IP-do-cliente:porta/mcp">
+          <label>Token</label>
+          <input type="text" name="zabbix_mcp_token" value="{{ c.zabbix_mcp_token or '' }}" placeholder="zmcp_...">
+          <button type="submit" class="btn-secondary">Salvar</button>
+        </form>
+      </td>
     </tr>
     {% endfor %}
   </table>

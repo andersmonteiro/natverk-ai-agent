@@ -12,6 +12,8 @@ class AgentClient(Base):
     name = Column(String, nullable=False, unique=True)
     base_url = Column(String, nullable=False)
     token_hash = Column(String, nullable=False)
+    zabbix_mcp_url = Column(String, nullable=True)
+    zabbix_mcp_token = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 

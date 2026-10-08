@@ -252,13 +252,21 @@ def create_client(
     request: Request,
     name: str = Form(...),
     base_url: str = Form(...),
+    zabbix_mcp_url: str = Form(""),
+    zabbix_mcp_token: str = Form(""),
     db: Session = Depends(get_db),
 ):
     redirect = require_admin(request)
     if redirect:
         return redirect
     token = secrets.token_urlsafe(32)
-    client = AgentClient(name=name, base_url=base_url, token_hash=hash_token(token))
+    client = AgentClient(
+        name=name,
+        base_url=base_url,
+        token_hash=hash_token(token),
+        zabbix_mcp_url=zabbix_mcp_url or None,
+        zabbix_mcp_token=zabbix_mcp_token or None,
+    )
     db.add(client)
     db.commit()
     clients = db.query(AgentClient).order_by(AgentClient.created_at.desc()).all()
@@ -271,6 +279,25 @@ def create_client(
             "new_name": name,
         },
     )
+
+
+@router.post("/clients/{client_id}/mcp")
+def update_client_mcp(
+    request: Request,
+    client_id: int,
+    zabbix_mcp_url: str = Form(""),
+    zabbix_mcp_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+    agent_client = db.query(AgentClient).filter(AgentClient.id == client_id).first()
+    if agent_client:
+        agent_client.zabbix_mcp_url = zabbix_mcp_url or None
+        agent_client.zabbix_mcp_token = zabbix_mcp_token or None
+        db.commit()
+    return RedirectResponse(url="/admin/clients", status_code=303)
 
 
 @router.get("/audit")
