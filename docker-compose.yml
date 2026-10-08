@@ -4,8 +4,22 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://agent:${POSTGRES_PASSWORD}@db:5432/agent
     expose:
       - "8000"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_DB: agent
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
   caddy:
     image: caddy:2-alpine
@@ -21,5 +35,6 @@ services:
       - agent
 
 volumes:
+  pg_data:
   caddy_data:
   caddy_config:

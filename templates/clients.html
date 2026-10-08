@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Clientes — Agente Natverk{% endblock %}
+{% block content %}
+<h1>Clientes</h1>
+<p class="subtitle">VMs de cliente autorizadas a usar o agente central</p>
+
+{% if new_token %}
+<div class="token-reveal">
+  <label>Token gerado para "{{ new_name }}" — copie agora, não será mostrado de novo</label>
+  <span class="mono">{{ new_token }}</span>
+</div>
+{% endif %}
+
+<div class="card">
+  <form method="post" action="/admin/clients">
+    <label for="name">Nome do cliente</label>
+    <input type="text" id="name" name="name" placeholder="ex: wnp" required>
+    <label for="base_url">URL base da VM do cliente</label>
+    <input type="url" id="base_url" name="base_url" placeholder="https://painel.cliente.com.br" required>
+    <button type="submit">Adicionar cliente</button>
+  </form>
+</div>
+
+<div class="card">
+  {% if clients %}
+  <table>
+    <tr><th>Nome</th><th>URL</th><th>Criado em</th></tr>
+    {% for c in clients %}
+    <tr>
+      <td>{{ c.name }}</td>
+      <td class="mono">{{ c.base_url }}</td>
+      <td>{{ c.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">Nenhum cliente cadastrado ainda.</p>
+  {% endif %}
+</div>
+{% endblock %}

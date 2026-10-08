@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Entrar — Agente Natverk{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <h1>Agente Natverk</h1>
+  <p class="subtitle">Painel de administração</p>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post" action="/admin/login">
+    <label for="password">Senha</label>
+    <input type="password" id="password" name="password" autofocus>
+    <button type="submit">Entrar</button>
+  </form>
+</div>
+{% endblock %}
