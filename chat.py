@@ -2,14 +2,16 @@ import os
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
 import admin
-from db import Base, engine
+from client_auth import resolve_client
+from db import Base, SessionLocal, engine
+from models import AgentAuditLog
 
 load_dotenv()
 
@@ -30,7 +32,7 @@ def on_startup():
 
 @app.get("/")
 def root():
-    return RedirectResponse(url="/admin/clients")
+    return RedirectResponse(url="/admin/dashboard")
 
 
 class ChatRequest(BaseModel):
@@ -43,15 +45,35 @@ def health():
 
 
 @app.post("/chat")
-def chat(req: ChatRequest):
+def chat(req: ChatRequest, x_agent_token: str = Header(...)):
+    db = SessionLocal()
+    agent_client = resolve_client(x_agent_token, db)
+    if agent_client is None:
+        db.close()
+        raise HTTPException(status_code=401, detail="Token de cliente inválido")
+    client_name = agent_client.name
+
     def event_stream():
-        with client.messages.stream(
-            model=MODEL,
-            max_tokens=1024,
-            messages=[{"role": "user", "content": req.message}],
-        ) as stream:
-            for text in stream.text_stream:
-                yield f"data: {text}\n\n"
+        try:
+            with client.messages.stream(
+                model=MODEL,
+                max_tokens=1024,
+                messages=[{"role": "user", "content": req.message}],
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {text}\n\n"
+                final = stream.get_final_message()
+            db.add(
+                AgentAuditLog(
+                    client_name=client_name,
+                    tool_name="chat",
+                    input_tokens=final.usage.input_tokens,
+                    output_tokens=final.usage.output_tokens,
+                )
+            )
+            db.commit()
+        finally:
+            db.close()
         yield "event: done\ndata: {}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

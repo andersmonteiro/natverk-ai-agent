@@ -268,3 +268,112 @@ code, .mono {
   padding: 24px 0;
   text-align: center;
 }
+
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.stat-card-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.stat-card-label svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.stat-card-value {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.dashboard-grid {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.panel-wide {
+  flex: 2;
+  min-width: 0;
+}
+
+.panel-narrow {
+  flex: 1;
+  min-width: 0;
+}
+
+h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.panel-subtitle {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin: 0 0 16px;
+}
+
+.share-bar {
+  width: 80px;
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.share-bar-fill {
+  height: 100%;
+  background: var(--text);
+  border-radius: 3px;
+}
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.activity-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.activity-list li:last-child {
+  border-bottom: none;
+}
+
+.activity-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.activity-client {
+  font-size: 13px;
+}
+
+.activity-tool, .activity-time {
+  color: var(--text-muted);
+  font-size: 11px;
+}

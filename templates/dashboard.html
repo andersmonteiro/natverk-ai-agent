@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Painel — Agente Natverk{% endblock %}
+{% block content %}
+<h1>Painel</h1>
+<p class="subtitle">Visão geral do uso do agente neste mês</p>
+
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M3 16c0-2.8 2.7-5 6-5s6 2.2 6 5M2 16h14M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Clientes ativos</span>
+    </div>
+    <div class="stat-card-value">{{ clients_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M3 4h14v9H7l-4 3V4Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      <span>Chamadas no mês</span>
+    </div>
+    <div class="stat-card-value">{{ calls_month }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M3 15V9l4-4 4 4 3-3 3 3v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Tokens no mês</span>
+    </div>
+    <div class="stat-card-value">{{ tokens_month | fmt_tokens }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">
+      <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M10 6.5v7M12 8.3c0-.9-.9-1.6-2-1.6s-2 .6-2 1.5c0 2 4 1 4 3 0 .9-.9 1.6-2 1.6s-2-.7-2-1.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      <span>Custo no mês</span>
+    </div>
+    <div class="stat-card-value">{{ cost_month | fmt_cost }}</div>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <div class="card panel-wide">
+    <h2>Uso por cliente</h2>
+    <p class="panel-subtitle">{{ cost_month | fmt_cost }} neste mês, entre {{ usage | length }} cliente(s)</p>
+    {% if usage %}
+    <table>
+      <tr><th>Cliente</th><th>Requisições</th><th>Tokens</th><th>Participação</th><th>Custo</th></tr>
+      {% for u in usage %}
+      <tr>
+        <td>{{ u.client_name }}</td>
+        <td class="mono">{{ u.requests }}</td>
+        <td class="mono">{{ (u.input_tokens + u.output_tokens) | fmt_tokens }}</td>
+        <td>
+          <div class="share-bar"><div class="share-bar-fill" style="width: {{ (u.cost / max_cost * 100) | round(0, 'floor') }}%"></div></div>
+        </td>
+        <td class="mono">{{ u.cost | fmt_cost }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="empty">Nenhum uso registrado neste mês ainda.</p>
+    {% endif %}
+  </div>
+
+  <div class="card panel-narrow">
+    <h2>Atividade recente</h2>
+    {% if recent %}
+    <ul class="activity-list">
+      {% for e in recent %}
+      <li>
+        <div class="activity-main">
+          <span class="activity-client">{{ e.client_name }}</span>
+          <span class="activity-tool mono">{{ e.tool_name }}</span>
+        </div>
+        <span class="activity-time mono">{{ e.created_at.strftime("%d/%m %H:%M") }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">Nenhuma atividade ainda.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

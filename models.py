@@ -25,4 +25,6 @@ class AgentAuditLog(Base):
     target_host = Column(String, nullable=True)
     request_summary = Column(Text, nullable=True)
     response_summary = Column(Text, nullable=True)
+    input_tokens = Column(Integer, nullable=False, default=0)
+    output_tokens = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
