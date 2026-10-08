@@ -19,6 +19,13 @@ load_dotenv()
 
 MODEL = "claude-sonnet-5"
 MAX_TOOL_TURNS = 8
+SYSTEM_PROMPT = (
+    "Você é o assistente de rede da Natverk. Seja econômico: use sempre a "
+    "ferramenta e os filtros mais específicos e enxutos possíveis para "
+    "responder exatamente o que foi perguntado — prefira contar/filtrar a "
+    "listar tudo, nunca busque mais dado do que o necessário pra essa "
+    "resposta, e responda de forma direta e curta."
+)
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=os.environ["SESSION_SECRET"])
@@ -62,6 +69,7 @@ async def run_with_tools(message: str, mcp_url: str, mcp_token: str | None):
             response = await client.messages.create(
                 model=MODEL,
                 max_tokens=1024,
+                system=SYSTEM_PROMPT,
                 tools=tools,
                 messages=messages,
             )
@@ -103,6 +111,7 @@ async def run_plain_chat(message: str):
     response = await client.messages.create(
         model=MODEL,
         max_tokens=1024,
+        system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": message}],
     )
     text = "".join(b.text for b in response.content if b.type == "text")
