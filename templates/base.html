@@ -36,9 +36,16 @@
         </a>
       </nav>
       <div class="sidebar-footer">
-        <form method="post" action="/admin/logout" class="inline-form">
-          <button type="submit">Sair</button>
-        </form>
+        {% set username = request.session.get("username") %}
+        <div class="sidebar-user">
+          <div class="sidebar-avatar">{{ (username or "?")[0] | upper }}</div>
+          <div class="sidebar-username">{{ username or "Admin" }}</div>
+          <form method="post" action="/admin/logout" class="inline-form">
+            <button type="submit" title="Sair">
+              <svg viewBox="0 0 20 20" fill="none"><path d="M8 17H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h3M13 14l4-4-4-4M17 10H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </form>
+        </div>
       </div>
     </aside>
     {% endif %}
@@ -46,5 +53,6 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

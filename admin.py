@@ -59,6 +59,7 @@ def login_submit(
             "login.html", {"request": request, "error": "Usuário ou senha incorretos"}
         )
     request.session["is_admin"] = True
+    request.session["username"] = username
     return RedirectResponse(url="/admin/dashboard", status_code=303)
 
 

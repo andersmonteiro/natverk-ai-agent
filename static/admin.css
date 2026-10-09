@@ -4,12 +4,21 @@
   --bg: #0a0a0a;
   --bg-raised: #141414;
   --border: #262626;
+  /* Faltavam -- .btn-secondary já referenciava as duas sem elas existirem
+     (caía no valor inicial do navegador: borda invisível, cor herdada),
+     e o modal/row2 abaixo (portados do painel do cliente) também usam. */
+  --border-2: #333333;
+  --border-dim: #1c1c1c;
   --text: #ededed;
+  --text-secondary: #b0b0b0;
   --text-muted: #8a8a8a;
   --accent: #ffffff;
   --accent-text: #0a0a0a;
+  --accent-dim: rgba(255, 255, 255, 0.08);
   --danger: #e5484d;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
   --radius: 12px;
+  --radius-sm: 8px;
 }
 
 * {
@@ -121,8 +130,54 @@ body {
   padding-top: 12px;
 }
 
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 4px;
+}
+
+.sidebar-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-text);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sidebar-username {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sidebar-footer .inline-form button {
-  padding: 9px 10px;
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--text-muted);
+  display: flex;
+}
+
+.sidebar-footer .inline-form button:hover {
+  color: var(--danger);
+  opacity: 1;
+}
+
+.sidebar-footer .inline-form button svg {
+  width: 15px;
+  height: 15px;
 }
 
 /* Full-width, igual ao painel do cliente -- max-width:880px + margin:auto
@@ -230,19 +285,114 @@ button:focus-visible {
   opacity: 1;
 }
 
-.mcp-edit-form {
+/* ── Field label persistente + linhas de 2 colunas ───────────────────
+   Mesmo padrão do painel do cliente: label sempre visível (não só
+   placeholder, que some assim que o campo é preenchido). */
+.field-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 10px 0 4px;
+}
+
+.field-label:first-child {
+  margin-top: 0;
+}
+
+.row2 {
   display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  padding: 10px 0 4px;
+  gap: 10px;
 }
 
-.mcp-edit-form label {
-  font-size: 11px;
+.row2 > * {
+  flex: 1;
+  min-width: 0;
 }
 
-.mcp-edit-form input {
-  margin-bottom: 0;
+/* ── Modal de edição (clientes) ───────────────────────────────────────
+   Trocou o formulário que ficava sempre aberto dentro da linha da tabela
+   (.mcp-edit-form, removido) -- com 3 campos + labels de token mais
+   longos (depois de mask_token) ele não cabia mais numa única linha flex
+   e os labels quebravam palavra por palavra. Mesmo padrão de modal do
+   painel do cliente: linha compacta na tabela, botão de editar abre um
+   modal com os campos organizados. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 999;
+  opacity: 0;
+  display: none;
+}
+
+.backdrop.open {
+  display: block;
+  opacity: 1;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.96);
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  max-height: 84vh;
+  overflow-y: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: none;
+  opacity: 0;
+  padding: 20px;
+}
+
+.modal.open {
+  display: block;
+  animation: modal-in 0.18s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.94); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.modal h2 {
+  margin-bottom: 16px;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  border-color: #4d4d4d;
+  background: var(--bg);
+  opacity: 1;
+}
+
+.icon-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .audit-detail {
@@ -620,9 +770,10 @@ h2 {
   stroke-linejoin: round;
 }
 
-.token-current {
-  font-weight: 400;
-  margin-left: 6px;
+.field-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: -10px 0 16px;
 }
 
 /* ── Responsivo: telas menores que um desktop normal ────────────── */

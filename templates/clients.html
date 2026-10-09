@@ -15,14 +15,26 @@
   <h2>Novo cliente</h2>
   <p class="panel-subtitle">Cadastra uma VM de cliente e gera o token de acesso dela</p>
   <form method="post" action="/admin/clients">
-    <label for="name">Nome do cliente</label>
-    <input type="text" id="name" name="name" placeholder="ex: wnp" required>
-    <label for="base_url">URL base da VM do cliente</label>
-    <input type="url" id="base_url" name="base_url" placeholder="https://painel.cliente.com.br" required>
-    <label for="zabbix_mcp_url">URL do Zabbix MCP Server (opcional)</label>
-    <input type="text" id="zabbix_mcp_url" name="zabbix_mcp_url" placeholder="http://IP-do-cliente:porta/mcp">
-    <label for="zabbix_mcp_token">Token do Zabbix MCP Server (opcional)</label>
-    <input type="password" id="zabbix_mcp_token" name="zabbix_mcp_token" placeholder="zmcp_..." autocomplete="new-password">
+    <div class="row2">
+      <div>
+        <label class="field-label" for="name">Nome do cliente</label>
+        <input type="text" id="name" name="name" placeholder="ex: wnp" required>
+      </div>
+      <div>
+        <label class="field-label" for="base_url">URL base da VM do cliente</label>
+        <input type="url" id="base_url" name="base_url" placeholder="https://painel.cliente.com.br" required>
+      </div>
+    </div>
+    <div class="row2">
+      <div>
+        <label class="field-label" for="zabbix_mcp_url">URL do Zabbix MCP Server (opcional)</label>
+        <input type="text" id="zabbix_mcp_url" name="zabbix_mcp_url" placeholder="http://IP-do-cliente:porta/mcp">
+      </div>
+      <div>
+        <label class="field-label" for="zabbix_mcp_token">Token do Zabbix MCP Server (opcional)</label>
+        <input type="password" id="zabbix_mcp_token" name="zabbix_mcp_token" placeholder="zmcp_..." autocomplete="new-password">
+      </div>
+    </div>
     <button type="submit">Adicionar cliente</button>
   </form>
 </div>
@@ -32,7 +44,7 @@
   <p class="panel-subtitle">{{ clients | length }} cliente(s) autorizados a usar o agente central</p>
   {% if clients %}
   <table>
-    <tr><th>Nome</th><th>URL</th><th>Zabbix MCP</th><th>Criado em</th></tr>
+    <tr><th>Nome</th><th>URL</th><th>Zabbix MCP</th><th>Criado em</th><th></th></tr>
     {% for c in clients %}
     <tr>
       <td>{{ c.name }}</td>
@@ -44,25 +56,19 @@
         <span class="pill pill-warning">Não configurado</span>
         {% endif %}
       </td>
-      <td>{{ c.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
-    </tr>
-    <tr>
-      <td colspan="4">
-        <!-- Tokens nunca voltam pro HTML com o valor completo (eram
-             expostos em texto puro em value="..." antes, visível pra
-             qualquer um com acesso à página ou só vendo o HTML) -- o
-             input fica vazio, só a versão mascarada (mask_token, últimos
-             4 caracteres) aparece, e o backend preserva o token salvo
-             quando o campo chega vazio (ver update_client_mcp). -->
-        <form method="post" action="/admin/clients/{{ c.id }}/mcp" class="mcp-edit-form">
-          <label>URL do Zabbix MCP Server</label>
-          <input type="text" name="zabbix_mcp_url" value="{{ c.zabbix_mcp_url or '' }}" placeholder="http://IP-do-cliente:porta/mcp">
-          <label>Token <span class="mono token-current">atual: {{ c.zabbix_mcp_token | mask_token }}</span></label>
-          <input type="password" name="zabbix_mcp_token" placeholder="deixe em branco para manter o token atual" autocomplete="new-password">
-          <label>Token do agent_tools (SSH) <span class="mono token-current">atual: {{ c.agent_tools_token | mask_token }}</span></label>
-          <input type="password" name="agent_tools_token" placeholder="deixe em branco para manter o token atual" autocomplete="new-password">
-          <button type="submit" class="btn-secondary">Salvar</button>
-        </form>
+      <td class="mono">{{ c.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+      <td>
+        <button
+          type="button"
+          class="icon-btn edit-client-btn"
+          title="Editar MCP/tokens"
+          data-id="{{ c.id }}"
+          data-zabbix-mcp-url="{{ c.zabbix_mcp_url or '' }}"
+          data-zabbix-token-masked="{{ c.zabbix_mcp_token | mask_token }}"
+          data-agent-token-masked="{{ c.agent_tools_token | mask_token }}"
+        >
+          <svg viewBox="0 0 20 20" fill="none"><path d="M12.5 3.5a1.8 1.8 0 0 1 2.5 2.5L6 15l-3 .8.8-3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </button>
       </td>
     </tr>
     {% endfor %}
@@ -71,4 +77,57 @@
   <p class="empty">Nenhum cliente cadastrado ainda.</p>
   {% endif %}
 </div>
+
+<!-- Tokens nunca voltam pro HTML com o valor completo (eram expostos em
+     texto puro em value="..." antes, visível pra qualquer um com acesso à
+     página ou só vendo o HTML) -- os inputs ficam sempre vazios, só a
+     versão mascarada (mask_token, últimos 4 caracteres) aparece como
+     referência, e o backend preserva o token salvo quando o campo chega
+     vazio (ver update_client_mcp). -->
+<div class="backdrop" id="backdrop"></div>
+<div class="modal" id="edit-modal">
+  <h2 id="edit-modal-title">Editar cliente</h2>
+  <form id="edit-form" method="post">
+    <label class="field-label" for="edit-zabbix-url">URL do Zabbix MCP Server</label>
+    <input type="text" id="edit-zabbix-url" name="zabbix_mcp_url" placeholder="http://IP-do-cliente:porta/mcp">
+
+    <label class="field-label" for="edit-zabbix-token">Token do Zabbix MCP Server</label>
+    <input type="password" id="edit-zabbix-token" name="zabbix_mcp_token" placeholder="deixe em branco para manter o atual" autocomplete="new-password">
+    <p class="field-hint mono" id="edit-zabbix-token-hint"></p>
+
+    <label class="field-label" for="edit-agent-token">Token do agent_tools (SSH)</label>
+    <input type="password" id="edit-agent-token" name="agent_tools_token" placeholder="deixe em branco para manter o atual" autocomplete="new-password">
+    <p class="field-hint mono" id="edit-agent-token-hint"></p>
+
+    <button type="submit">Salvar</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const backdrop = document.getElementById('backdrop');
+  const modal = document.getElementById('edit-modal');
+  const form = document.getElementById('edit-form');
+
+  function closeEditModal() {
+    modal.classList.remove('open');
+    backdrop.classList.remove('open');
+  }
+
+  document.querySelectorAll('.edit-client-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      form.action = `/admin/clients/${btn.dataset.id}/mcp`;
+      document.getElementById('edit-zabbix-url').value = btn.dataset.zabbixMcpUrl || '';
+      document.getElementById('edit-zabbix-token').value = '';
+      document.getElementById('edit-agent-token').value = '';
+      document.getElementById('edit-zabbix-token-hint').textContent = `atual: ${btn.dataset.zabbixTokenMasked}`;
+      document.getElementById('edit-agent-token-hint').textContent = `atual: ${btn.dataset.agentTokenMasked}`;
+      modal.classList.add('open');
+      backdrop.classList.add('open');
+    });
+  });
+
+  backdrop.addEventListener('click', closeEditModal);
+</script>
 {% endblock %}
