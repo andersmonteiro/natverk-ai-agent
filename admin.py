@@ -1,5 +1,7 @@
 import datetime
 import secrets
+import subprocess
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter, Depends, Form, Request
@@ -46,6 +48,27 @@ templates.env.filters["mask_token"] = mask_token
 HEALTH_CHECK_TIMEOUT = 2.5
 
 
+def check_ping(url: str | None) -> bool | None:
+    """Ping ICMP no host da URL -- não depende de nenhum serviço HTTP estar
+    escutando numa porta certa, só de a máquina responder na rede (ex: a
+    porta do painel do cliente pode estar bloqueada/trocada sem que isso
+    signifique que o host em si está fora do ar)."""
+    if not url:
+        return None
+    host = urlparse(url).hostname
+    if not host:
+        return None
+    try:
+        result = subprocess.run(
+            ["ping", "-c", "1", "-W", "2", host],
+            capture_output=True,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except (subprocess.SubprocessError, OSError):
+        return False
+
+
 def check_up(url: str | None) -> bool | None:
     """True/False = respondeu ou não; None = nada configurado pra checar.
     verify=False porque essas URLs são VMs de cliente na rede interna,
@@ -86,7 +109,7 @@ def clients_health(clients: list[AgentClient]) -> list[dict]:
         rows.append(
             {
                 "client": c,
-                "host_up": check_up(c.base_url),
+                "host_up": check_ping(c.base_url),
                 "mcp_up": check_up(c.zabbix_mcp_url),
                 "whatsapp_status": check_whatsapp_status(c.whatsapp_health_url),
             }
