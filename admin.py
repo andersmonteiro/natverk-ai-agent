@@ -275,6 +275,7 @@ def create_client(
     base_url: str = Form(...),
     zabbix_mcp_url: str = Form(""),
     zabbix_mcp_token: str = Form(""),
+    monthly_budget_usd: str = Form(""),
     db: Session = Depends(get_db),
 ):
     redirect = require_admin(request)
@@ -287,6 +288,7 @@ def create_client(
         token_hash=hash_token(token),
         zabbix_mcp_url=zabbix_mcp_url or None,
         zabbix_mcp_token=zabbix_mcp_token or None,
+        monthly_budget_usd=float(monthly_budget_usd) if monthly_budget_usd else None,
     )
     db.add(client)
     db.commit()
@@ -309,6 +311,7 @@ def update_client_mcp(
     zabbix_mcp_url: str = Form(""),
     zabbix_mcp_token: str = Form(""),
     agent_tools_token: str = Form(""),
+    monthly_budget_usd: str = Form(""),
     db: Session = Depends(get_db),
 ):
     redirect = require_admin(request)
@@ -325,6 +328,7 @@ def update_client_mcp(
             agent_client.zabbix_mcp_token = zabbix_mcp_token
         if agent_tools_token:
             agent_client.agent_tools_token = agent_tools_token
+        agent_client.monthly_budget_usd = float(monthly_budget_usd) if monthly_budget_usd else None
         db.commit()
     return RedirectResponse(url="/admin/clients", status_code=303)
 

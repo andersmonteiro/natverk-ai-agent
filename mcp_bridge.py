@@ -8,7 +8,11 @@ from mcp.client.streamable_http import streamable_http_client
 @asynccontextmanager
 async def mcp_session(url: str, token: str | None):
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    async with httpx2.AsyncClient(headers=headers) as http_client:
+    # Sem timeout aqui, um Zabbix MCP travado ou fora do ar deixava o /chat
+    # inteiro pendurado pra sempre (sem resposta, sem erro) -- 30s é generoso
+    # o bastante pra uma consulta Zabbix normal e curto o bastante pra não
+    # segurar a requisição indefinidamente.
+    async with httpx2.AsyncClient(headers=headers, timeout=30.0) as http_client:
         async with streamable_http_client(url, http_client=http_client) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
