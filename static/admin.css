@@ -786,6 +786,29 @@ h2 {
   width: 100%;
 }
 
+#delete-client-form {
+  margin-top: 10px;
+}
+
+.btn-danger {
+  width: 100%;
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  color: var(--accent-text);
+  opacity: 1;
+}
+
+.status-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 /* ── Responsivo: telas menores que um desktop normal ────────────── */
 @media (max-width: 1100px) {
   .stat-cards { grid-template-columns: repeat(2, 1fr); }

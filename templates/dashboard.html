@@ -36,6 +36,50 @@
   </div>
 </div>
 
+<div class="card">
+  <h2>Status dos clientes</h2>
+  <p class="panel-subtitle">Host da VM, Zabbix MCP e bot do WhatsApp -- checagem ao vivo</p>
+  {% if health_rows %}
+  <table>
+    <tr><th>Cliente</th><th>Host</th><th>Zabbix MCP</th><th>WhatsApp</th></tr>
+    {% for row in health_rows %}
+    <tr>
+      <td>{{ row.client.name }}</td>
+      <td>
+        {% if row.host_up %}
+        <span class="pill pill-healthy">Online</span>
+        {% else %}
+        <span class="pill pill-critical">Offline</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if row.mcp_up is none %}
+        <span class="pill pill-warning">Não configurado</span>
+        {% elif row.mcp_up %}
+        <span class="pill pill-healthy">Online</span>
+        {% else %}
+        <span class="pill pill-critical">Offline</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if row.whatsapp_status is none %}
+        <span class="pill pill-warning">Não configurado</span>
+        {% elif row.whatsapp_status == "ready" %}
+        <span class="pill pill-healthy">Conectado</span>
+        {% elif row.whatsapp_status == "initializing" %}
+        <span class="pill pill-warning">Iniciando</span>
+        {% else %}
+        <span class="pill pill-critical">Offline</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">Nenhum cliente cadastrado ainda.</p>
+  {% endif %}
+</div>
+
 <div class="dashboard-grid">
   <div class="card panel-wide">
     <h2>Uso por cliente</h2>

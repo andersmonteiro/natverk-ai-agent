@@ -1,6 +1,7 @@
 import datetime
 import secrets
 
+import httpx
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -42,6 +43,56 @@ templates.env.filters["fmt_tokens"] = fmt_tokens
 templates.env.filters["fmt_cost"] = fmt_cost
 templates.env.filters["mask_token"] = mask_token
 
+HEALTH_CHECK_TIMEOUT = 2.5
+
+
+def check_up(url: str | None) -> bool | None:
+    """True/False = respondeu ou não; None = nada configurado pra checar.
+    verify=False porque essas URLs são VMs de cliente na rede interna,
+    geralmente com certificado autoassinado -- só queremos saber se o
+    servidor responde, não validar a cadeia TLS. Qualquer status HTTP
+    (mesmo 404/401/405) conta como "up": o que importa é que o servidor
+    respondeu, não o que respondeu."""
+    if not url:
+        return None
+    try:
+        with httpx.Client(verify=False, timeout=HEALTH_CHECK_TIMEOUT) as c:
+            c.get(url)
+        return True
+    except httpx.HTTPError:
+        return False
+
+
+def check_whatsapp_status(url: str | None) -> str | None:
+    """None = sem URL configurada. "ready"/"initializing" vêm do /health do
+    bot (ver whatsapp/server.js). "down" = não respondeu."""
+    if not url:
+        return None
+    try:
+        with httpx.Client(verify=False, timeout=HEALTH_CHECK_TIMEOUT) as c:
+            resp = c.get(url)
+            data = resp.json()
+            return data.get("status", "down")
+    except (httpx.HTTPError, ValueError):
+        return "down"
+
+
+def clients_health(clients: list[AgentClient]) -> list[dict]:
+    """Status ao vivo (host da VM, Zabbix MCP, WhatsApp) por cliente --
+    checagem best-effort com timeout curto, nunca levanta exceção pro
+    chamador (um cliente fora do ar não pode quebrar o resto da página)."""
+    rows = []
+    for c in clients:
+        rows.append(
+            {
+                "client": c,
+                "host_up": check_up(c.base_url),
+                "mcp_up": check_up(c.zabbix_mcp_url),
+                "whatsapp_status": check_whatsapp_status(c.whatsapp_health_url),
+            }
+        )
+    return rows
+
 
 @router.get("/login")
 def login_form(request: Request):
@@ -78,7 +129,9 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     now = datetime.datetime.utcnow()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    clients_count = db.query(AgentClient).count()
+    clients = db.query(AgentClient).order_by(AgentClient.name).all()
+    clients_count = len(clients)
+    health_rows = clients_health(clients)
 
     month_rows = (
         db.query(
@@ -137,6 +190,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "usage": usage,
             "max_cost": max_cost,
             "recent": recent,
+            "health_rows": health_rows,
         },
     )
 
@@ -264,7 +318,12 @@ def list_clients(request: Request, db: Session = Depends(get_db)):
     clients = db.query(AgentClient).order_by(AgentClient.created_at.desc()).all()
     return templates.TemplateResponse(
         "clients.html",
-        {"request": request, "clients": clients, "new_token": None, "new_name": None},
+        {
+            "request": request,
+            "health_rows": clients_health(clients),
+            "new_token": None,
+            "new_name": None,
+        },
     )
 
 
@@ -275,6 +334,7 @@ def create_client(
     base_url: str = Form(...),
     zabbix_mcp_url: str = Form(""),
     zabbix_mcp_token: str = Form(""),
+    whatsapp_health_url: str = Form(""),
     monthly_budget_usd: str = Form(""),
     db: Session = Depends(get_db),
 ):
@@ -288,6 +348,7 @@ def create_client(
         token_hash=hash_token(token),
         zabbix_mcp_url=zabbix_mcp_url or None,
         zabbix_mcp_token=zabbix_mcp_token or None,
+        whatsapp_health_url=whatsapp_health_url or None,
         monthly_budget_usd=float(monthly_budget_usd) if monthly_budget_usd else None,
     )
     db.add(client)
@@ -297,7 +358,7 @@ def create_client(
         "clients.html",
         {
             "request": request,
-            "clients": clients,
+            "health_rows": clients_health(clients),
             "new_token": token,
             "new_name": name,
         },
@@ -311,6 +372,7 @@ def update_client_mcp(
     zabbix_mcp_url: str = Form(""),
     zabbix_mcp_token: str = Form(""),
     agent_tools_token: str = Form(""),
+    whatsapp_health_url: str = Form(""),
     monthly_budget_usd: str = Form(""),
     db: Session = Depends(get_db),
 ):
@@ -320,6 +382,7 @@ def update_client_mcp(
     agent_client = db.query(AgentClient).filter(AgentClient.id == client_id).first()
     if agent_client:
         agent_client.zabbix_mcp_url = zabbix_mcp_url or None
+        agent_client.whatsapp_health_url = whatsapp_health_url or None
         # Tokens nunca voltam pro HTML (ver mask_token em clients.html) --
         # o campo é sempre enviado vazio a menos que o operador tenha
         # digitado um valor novo pra trocar. Campo vazio = "mantém o atual",
@@ -329,6 +392,18 @@ def update_client_mcp(
         if agent_tools_token:
             agent_client.agent_tools_token = agent_tools_token
         agent_client.monthly_budget_usd = float(monthly_budget_usd) if monthly_budget_usd else None
+        db.commit()
+    return RedirectResponse(url="/admin/clients", status_code=303)
+
+
+@router.post("/clients/{client_id}/delete")
+def delete_client(request: Request, client_id: int, db: Session = Depends(get_db)):
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+    agent_client = db.query(AgentClient).filter(AgentClient.id == client_id).first()
+    if agent_client:
+        db.delete(agent_client)
         db.commit()
     return RedirectResponse(url="/admin/clients", status_code=303)
 
@@ -357,7 +432,7 @@ def regenerate_client_token(
         "clients.html",
         {
             "request": request,
-            "clients": clients,
+            "health_rows": clients_health(clients),
             "new_token": token,
             "new_name": agent_client.name,
         },

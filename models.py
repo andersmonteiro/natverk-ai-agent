@@ -20,6 +20,10 @@ class AgentClient(Base):
     # Teto de gasto mensal em USD -- None/0 = sem limite. Checado no /chat
     # antes de cada chamada à Anthropic (ver chat.py:check_budget).
     monthly_budget_usd = Column(Float, nullable=True)
+    # URL do endpoint /health do bot WhatsApp desse cliente (ex:
+    # http://IP-do-cliente:8765/health) -- usado só pro widget de status
+    # no painel (admin.py:check_whatsapp_status), não pro agente em si.
+    whatsapp_health_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 

@@ -81,6 +81,7 @@ def on_startup():
     # (seguro rodar em todo startup, inclusive num banco que já tem a coluna).
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE agent_clients ADD COLUMN IF NOT EXISTS monthly_budget_usd FLOAT"))
+        conn.execute(text("ALTER TABLE agent_clients ADD COLUMN IF NOT EXISTS whatsapp_health_url VARCHAR"))
 
 
 @app.get("/")
