@@ -22,7 +22,7 @@
     <label for="zabbix_mcp_url">URL do Zabbix MCP Server (opcional)</label>
     <input type="text" id="zabbix_mcp_url" name="zabbix_mcp_url" placeholder="http://IP-do-cliente:porta/mcp">
     <label for="zabbix_mcp_token">Token do Zabbix MCP Server (opcional)</label>
-    <input type="text" id="zabbix_mcp_token" name="zabbix_mcp_token" placeholder="zmcp_...">
+    <input type="password" id="zabbix_mcp_token" name="zabbix_mcp_token" placeholder="zmcp_..." autocomplete="new-password">
     <button type="submit">Adicionar cliente</button>
   </form>
 </div>
@@ -48,13 +48,19 @@
     </tr>
     <tr>
       <td colspan="4">
+        <!-- Tokens nunca voltam pro HTML com o valor completo (eram
+             expostos em texto puro em value="..." antes, visível pra
+             qualquer um com acesso à página ou só vendo o HTML) -- o
+             input fica vazio, só a versão mascarada (mask_token, últimos
+             4 caracteres) aparece, e o backend preserva o token salvo
+             quando o campo chega vazio (ver update_client_mcp). -->
         <form method="post" action="/admin/clients/{{ c.id }}/mcp" class="mcp-edit-form">
           <label>URL do Zabbix MCP Server</label>
           <input type="text" name="zabbix_mcp_url" value="{{ c.zabbix_mcp_url or '' }}" placeholder="http://IP-do-cliente:porta/mcp">
-          <label>Token</label>
-          <input type="text" name="zabbix_mcp_token" value="{{ c.zabbix_mcp_token or '' }}" placeholder="zmcp_...">
-          <label>Token do agent_tools (SSH)</label>
-          <input type="text" name="agent_tools_token" value="{{ c.agent_tools_token or '' }}" placeholder="AGENT_TOOLS_TOKEN da VM">
+          <label>Token <span class="mono token-current">atual: {{ c.zabbix_mcp_token | mask_token }}</span></label>
+          <input type="password" name="zabbix_mcp_token" placeholder="deixe em branco para manter o token atual" autocomplete="new-password">
+          <label>Token do agent_tools (SSH) <span class="mono token-current">atual: {{ c.agent_tools_token | mask_token }}</span></label>
+          <input type="password" name="agent_tools_token" placeholder="deixe em branco para manter o token atual" autocomplete="new-password">
           <button type="submit" class="btn-secondary">Salvar</button>
         </form>
       </td>

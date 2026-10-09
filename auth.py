@@ -1,3 +1,4 @@
+import hmac
 import os
 
 from fastapi import Request
@@ -15,7 +16,11 @@ def require_admin(request: Request):
 
 
 def check_credentials(username: str, password: str) -> bool:
-    return (
-        username == os.environ["ADMIN_USERNAME"]
-        and password == os.environ["ADMIN_PASSWORD"]
-    )
+    # hmac.compare_digest em vez de == -- comparação de string comum do
+    # Python retorna no primeiro byte diferente, então o tempo de resposta
+    # varia com quantos caracteres batem (timing attack clássico contra
+    # login). compare_digest sempre compara o tamanho inteiro, tempo
+    # constante independente de onde a diferença está.
+    user_ok = hmac.compare_digest(username, os.environ["ADMIN_USERNAME"])
+    pass_ok = hmac.compare_digest(password, os.environ["ADMIN_PASSWORD"])
+    return user_ok and pass_ok

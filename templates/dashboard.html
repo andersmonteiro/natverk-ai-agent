@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Painel — Agente Natverk{% endblock %}
+{% block meta_refresh %}<meta http-equiv="refresh" content="30">{% endblock %}
 {% block content %}
 <h1>Painel</h1>
 <p class="subtitle">Visão geral do uso do agente neste mês</p>
 
 <div class="stat-cards">
-  <div class="stat-card">
+  <a class="stat-card" href="/admin/clients">
     <div class="stat-card-label">
       <svg viewBox="0 0 20 20" fill="none"><path d="M3 16c0-2.8 2.7-5 6-5s6 2.2 6 5M2 16h14M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Clientes ativos</span>
     </div>
     <div class="stat-card-value">{{ clients_count }}</div>
-  </div>
+  </a>
   <div class="stat-card">
     <div class="stat-card-label">
       <svg viewBox="0 0 20 20" fill="none"><path d="M3 4h14v9H7l-4 3V4Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>

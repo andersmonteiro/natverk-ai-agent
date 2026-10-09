@@ -29,8 +29,18 @@ def fmt_cost(n: float) -> str:
     return f"${n:,.2f}"
 
 
+def mask_token(token: str | None) -> str:
+    """Só os últimos 4 caracteres (mesma prática de AWS/Stripe pra chave de
+    API) -- o suficiente pra confirmar qual token está configurado sem
+    reexpor o segredo inteiro de volta no HTML renderizado."""
+    if not token:
+        return "—"
+    return f"{'•' * 8}{token[-4:]}"
+
+
 templates.env.filters["fmt_tokens"] = fmt_tokens
 templates.env.filters["fmt_cost"] = fmt_cost
+templates.env.filters["mask_token"] = mask_token
 
 
 @router.get("/login")
@@ -306,8 +316,14 @@ def update_client_mcp(
     agent_client = db.query(AgentClient).filter(AgentClient.id == client_id).first()
     if agent_client:
         agent_client.zabbix_mcp_url = zabbix_mcp_url or None
-        agent_client.zabbix_mcp_token = zabbix_mcp_token or None
-        agent_client.agent_tools_token = agent_tools_token or None
+        # Tokens nunca voltam pro HTML (ver mask_token em clients.html) --
+        # o campo é sempre enviado vazio a menos que o operador tenha
+        # digitado um valor novo pra trocar. Campo vazio = "mantém o atual",
+        # nunca "limpa", senão editar a URL por engano apagaria o token.
+        if zabbix_mcp_token:
+            agent_client.zabbix_mcp_token = zabbix_mcp_token
+        if agent_tools_token:
+            agent_client.agent_tools_token = agent_tools_token
         db.commit()
     return RedirectResponse(url="/admin/clients", status_code=303)
 

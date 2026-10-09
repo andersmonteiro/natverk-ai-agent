@@ -39,7 +39,18 @@ SYSTEM_PROMPT = [
 ]
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=os.environ["SESSION_SECRET"])
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ["SESSION_SECRET"],
+    # https_only: sem isso o cookie de sessão do admin ia sem a flag Secure
+    # -- seria enviado mesmo numa conexão HTTP não criptografada caso o
+    # HTTPS do Caddy seja contornado por algum motivo. same_site="lax" e
+    # max_age mais curto (8h, não os 14 dias padrão do Starlette) reduzem
+    # a janela de um cookie de sessão de administrador roubado/vazado.
+    https_only=True,
+    same_site="lax",
+    max_age=8 * 60 * 60,
+)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(admin.router)
 

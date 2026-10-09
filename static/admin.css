@@ -340,6 +340,10 @@ tr:last-child td {
   border-bottom: none;
 }
 
+tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
 code, .mono {
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
@@ -379,6 +383,14 @@ code, .mono {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.12s ease;
+}
+
+a.stat-card:hover {
+  border-color: #4d4d4d;
 }
 
 .stat-card-label {
@@ -601,4 +613,24 @@ h2 {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.token-current {
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+/* ── Responsivo: telas menores que um desktop normal ────────────── */
+@media (max-width: 1100px) {
+  .stat-cards { grid-template-columns: repeat(2, 1fr); }
+  .dashboard-grid { flex-direction: column; }
+  .panel-wide, .panel-narrow { flex: 1; width: 100%; }
+}
+@media (max-width: 720px) {
+  .sidebar { width: 72px; padding: 16px 10px; }
+  .sidebar-brand { display: none; }
+  .sidebar-nav a span { display: none; }
+  .sidebar-nav a { justify-content: center; padding: 10px; }
+  .sidebar-footer .inline-form button { text-align: center; width: 100%; }
+  main { padding: 32px 16px; }
 }
