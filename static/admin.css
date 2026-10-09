@@ -776,6 +776,16 @@ h2 {
   margin: -10px 0 16px;
 }
 
+#regenerate-token-form {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-regenerate-token {
+  width: 100%;
+}
+
 /* ── Responsivo: telas menores que um desktop normal ────────────── */
 @media (max-width: 1100px) {
   .stat-cards { grid-template-columns: repeat(2, 1fr); }

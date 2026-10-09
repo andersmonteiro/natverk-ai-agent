@@ -71,6 +71,7 @@
           class="icon-btn edit-client-btn"
           title="Editar MCP/tokens"
           data-id="{{ c.id }}"
+          data-name="{{ c.name }}"
           data-zabbix-mcp-url="{{ c.zabbix_mcp_url or '' }}"
           data-zabbix-token-masked="{{ c.zabbix_mcp_token | mask_token }}"
           data-agent-token-masked="{{ c.agent_tools_token | mask_token }}"
@@ -113,6 +114,9 @@
 
     <button type="submit">Salvar</button>
   </form>
+  <form id="regenerate-token-form" method="post">
+    <button type="submit" class="btn-secondary btn-regenerate-token">Regenerar token de acesso</button>
+  </form>
 </div>
 {% endblock %}
 
@@ -121,6 +125,7 @@
   const backdrop = document.getElementById('backdrop');
   const modal = document.getElementById('edit-modal');
   const form = document.getElementById('edit-form');
+  const regenerateForm = document.getElementById('regenerate-token-form');
 
   function closeEditModal() {
     modal.classList.remove('open');
@@ -130,6 +135,8 @@
   document.querySelectorAll('.edit-client-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       form.action = `/admin/clients/${btn.dataset.id}/mcp`;
+      regenerateForm.action = `/admin/clients/${btn.dataset.id}/regenerate-token`;
+      regenerateForm.dataset.clientName = btn.dataset.name || '';
       document.getElementById('edit-zabbix-url').value = btn.dataset.zabbixMcpUrl || '';
       document.getElementById('edit-zabbix-token').value = '';
       document.getElementById('edit-agent-token').value = '';
@@ -139,6 +146,13 @@
       modal.classList.add('open');
       backdrop.classList.add('open');
     });
+  });
+
+  regenerateForm.addEventListener('submit', (e) => {
+    const name = regenerateForm.dataset.clientName || 'este cliente';
+    if (!confirm(`Gerar um novo token de acesso pra "${name}"? O token atual para de funcionar imediatamente -- qualquer coisa usando ele (bot do WhatsApp, etc) vai precisar ser atualizada com o novo.`)) {
+      e.preventDefault();
+    }
   });
 
   backdrop.addEventListener('click', closeEditModal);

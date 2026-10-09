@@ -333,6 +333,37 @@ def update_client_mcp(
     return RedirectResponse(url="/admin/clients", status_code=303)
 
 
+@router.post("/clients/{client_id}/regenerate-token")
+def regenerate_client_token(
+    request: Request,
+    client_id: int,
+    db: Session = Depends(get_db),
+):
+    # O token (X-Agent-Token) só é mostrado uma vez na criação -- só o hash
+    # fica salvo. Pra quem perdeu o original (ex: foi usado numa instância
+    # de cliente e não ficou anotado em lugar nenhum), gerar um novo é o
+    # único jeito de recuperar o acesso; invalida o anterior na hora.
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+    agent_client = db.query(AgentClient).filter(AgentClient.id == client_id).first()
+    if agent_client is None:
+        return RedirectResponse(url="/admin/clients", status_code=303)
+    token = secrets.token_urlsafe(32)
+    agent_client.token_hash = hash_token(token)
+    db.commit()
+    clients = db.query(AgentClient).order_by(AgentClient.created_at.desc()).all()
+    return templates.TemplateResponse(
+        "clients.html",
+        {
+            "request": request,
+            "clients": clients,
+            "new_token": token,
+            "new_name": agent_client.name,
+        },
+    )
+
+
 @router.get("/audit")
 def list_audit(request: Request, db: Session = Depends(get_db)):
     redirect = require_admin(request)
