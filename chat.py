@@ -352,44 +352,66 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
 
         history = load_history(db, client_name, conversation_id)
 
+        # A lib mcp tem um bug de reconexão conhecido (ver issues #3307/
+        # #3257/#3522 do modelcontextprotocol/python-sdk) que às vezes tenta
+        # abrir a conexão de GET stream com TLS contra um servidor que só
+        # fala HTTP puro, derrubando a sessão inteira com um ExceptionGroup
+        # antes de qualquer texto sair -- confirmado batendo nisso de novo
+        # em teste ao vivo. Uma sessão MCP nova geralmente recupera na
+        # segunda tentativa. Só tenta de novo se NADA foi mostrado ainda:
+        # depois que já saiu texto de verdade pro usuário, repetir a
+        # pergunta inteira duplicaria/confundiria a resposta em vez de
+        # corrigir o problema.
         try:
-            if mcp_url:
-                gen = run_with_tools(
-                    req.message, mcp_url, mcp_token, base_url, agent_tools_token, history
-                )
-            else:
-                gen = run_plain_chat(req.message, history)
+            MAX_ATTEMPTS = 2
+            last_exc: Exception | None = None
+            for attempt in range(1, MAX_ATTEMPTS + 1):
+                try:
+                    if mcp_url:
+                        gen = run_with_tools(
+                            req.message, mcp_url, mcp_token, base_url, agent_tools_token, history
+                        )
+                    else:
+                        gen = run_plain_chat(req.message, history)
 
-            async for event in gen:
-                if event["type"] == "text":
-                    full_text += event["text"]
-                    # Mesmo framing de sempre (uma linha "data: " por envio),
-                    # só que agora em vários pedaços conforme o modelo gera
-                    # em vez de um único envio no final -- streaming de
-                    # verdade em vez de só a aparência de stream.
-                    yield f"data: {event['text']}\n\n"
-                elif event["type"] == "final":
-                    usage = event["usage"]
-                    tool_calls = event["tool_calls"]
-        except Exception as exc:
-            status = "error"
-            # unhandled errors in a TaskGroup (ExceptionGroup, Python 3.11+)
-            # esconde a causa real atrás de uma mensagem genérica -- sem
-            # isso não dava pra saber se o problema era no SSE do MCP, na
-            # chamada à Anthropic, ou na agent_tools_bridge. logger.exception
-            # imprime o traceback completo (inclusive das sub-exceptions do
-            # grupo) no stdout do container; o audit log abaixo guarda só um
-            # resumo curto pra não inflar o banco.
-            logger.exception("Erro ao processar /chat (cliente=%s)", client_name)
-            detail = str(exc)
-            sub_exceptions = getattr(exc, "exceptions", None)
-            if sub_exceptions:
-                detail = " | ".join(f"{type(e).__name__}: {e}" for e in sub_exceptions)
-            error_message = detail[:500]
-            yield (
-                "data: Desculpe, ocorreu um erro ao processar sua pergunta. "
-                "Tente novamente em instantes.\n\n"
-            )
+                    async for event in gen:
+                        if event["type"] == "text":
+                            full_text += event["text"]
+                            # Mesmo framing de sempre (uma linha "data: " por envio),
+                            # só que agora em vários pedaços conforme o modelo gera
+                            # em vez de um único envio no final -- streaming de
+                            # verdade em vez de só a aparência de stream.
+                            yield f"data: {event['text']}\n\n"
+                        elif event["type"] == "final":
+                            usage = event["usage"]
+                            tool_calls = event["tool_calls"]
+                    last_exc = None
+                    break
+                except Exception as exc:
+                    last_exc = exc
+                    # unhandled errors in a TaskGroup (ExceptionGroup, Python
+                    # 3.11+) esconde a causa real atrás de uma mensagem
+                    # genérica -- logger.exception imprime o traceback completo
+                    # (inclusive das sub-exceptions do grupo) no stdout do
+                    # container pra quem for investigar.
+                    logger.exception(
+                        "Erro ao processar /chat (cliente=%s, tentativa=%d/%d)",
+                        client_name, attempt, MAX_ATTEMPTS,
+                    )
+                    if full_text or attempt == MAX_ATTEMPTS:
+                        break
+
+            if last_exc is not None:
+                status = "error"
+                detail = str(last_exc)
+                sub_exceptions = getattr(last_exc, "exceptions", None)
+                if sub_exceptions:
+                    detail = " | ".join(f"{type(e).__name__}: {e}" for e in sub_exceptions)
+                error_message = detail[:500]
+                yield (
+                    "data: Desculpe, ocorreu um erro ao processar sua pergunta. "
+                    "Tente novamente em instantes.\n\n"
+                )
         finally:
             duration_ms = int((time.monotonic() - start) * 1000)
             tool_names = [t["name"] for t in tool_calls]
