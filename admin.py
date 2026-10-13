@@ -482,7 +482,7 @@ VENDORS = ["huawei", "mikrotik", "datacom", "outro"]
 
 
 @router.get("/knowledge")
-def list_knowledge(request: Request, db: Session = Depends(get_db)):
+def list_knowledge(request: Request, vendor: str = "", db: Session = Depends(get_db)):
     redirect = require_admin(request)
     if redirect:
         return redirect
@@ -494,9 +494,13 @@ def list_knowledge(request: Request, db: Session = Depends(get_db)):
     by_vendor = {v: [] for v in VENDORS}
     for e in entries:
         by_vendor.setdefault(e.vendor, []).append(e)
+    # ?vendor= no redirect depois de criar/editar/excluir -- sem isso a
+    # aba ativa sempre voltava pra primeira (Huawei) depois de qualquer
+    # ação, mesmo estando trabalhando em outro fabricante (Datacom).
+    active_vendor = vendor if vendor in VENDORS else VENDORS[0]
     return templates.TemplateResponse(
         "knowledge.html",
-        {"request": request, "vendors": VENDORS, "by_vendor": by_vendor},
+        {"request": request, "vendors": VENDORS, "by_vendor": by_vendor, "active_vendor": active_vendor},
     )
 
 
@@ -525,7 +529,7 @@ def create_knowledge(
         )
     )
     db.commit()
-    return RedirectResponse(url="/admin/knowledge", status_code=303)
+    return RedirectResponse(url=f"/admin/knowledge?vendor={vendor}", status_code=303)
 
 
 @router.post("/knowledge/{entry_id}")
@@ -552,7 +556,7 @@ def update_knowledge(
         entry.sample_output = sample_output or None
         entry.description = description or None
         db.commit()
-    return RedirectResponse(url="/admin/knowledge", status_code=303)
+    return RedirectResponse(url=f"/admin/knowledge?vendor={vendor}", status_code=303)
 
 
 @router.post("/knowledge/{entry_id}/delete")
@@ -561,7 +565,8 @@ def delete_knowledge(request: Request, entry_id: int, db: Session = Depends(get_
     if redirect:
         return redirect
     entry = db.query(CommandKnowledge).filter(CommandKnowledge.id == entry_id).first()
+    vendor = entry.vendor if entry else ""
     if entry:
         db.delete(entry)
         db.commit()
-    return RedirectResponse(url="/admin/knowledge", status_code=303)
+    return RedirectResponse(url=f"/admin/knowledge?vendor={vendor}", status_code=303)

@@ -6,7 +6,7 @@
 
 <div class="knowledge-tabs">
   {% for v in vendors %}
-  <button type="button" class="knowledge-tab{% if loop.first %} active{% endif %}" data-vendor="{{ v }}">
+  <button type="button" class="knowledge-tab{% if v == active_vendor %} active{% endif %}" data-vendor="{{ v }}">
     {{ v | capitalize }}
     <span class="knowledge-tab-count">{{ by_vendor[v] | length }}</span>
   </button>
@@ -14,7 +14,7 @@
 </div>
 
 {% for v in vendors %}
-<div class="knowledge-panel{% if loop.first %} active{% endif %}" data-vendor-panel="{{ v }}">
+<div class="knowledge-panel{% if v == active_vendor %} active{% endif %}" data-vendor-panel="{{ v }}">
   <div class="card">
     <h2>Novo comando — {{ v | capitalize }}</h2>
     <p class="panel-subtitle">Cadastre o comando exato, uma saída de exemplo e o que ele faz</p>
