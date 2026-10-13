@@ -50,7 +50,9 @@ AGENT_TOOLS_DEFS = [
         "name": "consultar_bgp_vizinho",
         "description": (
             "Consulta AO VIVO (abre SSH na hora) os prefixos anunciados por "
-            "um vizinho BGP específico. Estado em tempo real, nunca cacheado."
+            "um vizinho BGP específico. Estado em tempo real, nunca cacheado. "
+            "Só Huawei por enquanto. Precisa do IP do vizinho -- se não "
+            "souber, use listar_sessoes_bgp primeiro."
         ),
         "input_schema": {
             "type": "object",
@@ -59,6 +61,104 @@ AGENT_TOOLS_DEFS = [
                 "neighbor_ip": {"type": "string", "description": "IP do vizinho BGP"},
             },
             "required": ["hostid", "neighbor_ip"],
+        },
+    },
+    {
+        "name": "listar_sessoes_bgp",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) TODAS as sessões BGP "
+            "configuradas no equipamento: IP do vizinho, AS, estado "
+            "(Established/Idle/Active), tempo de atividade e prefixos "
+            "recebidos. Use isso primeiro quando não souber o IP de um "
+            "vizinho BGP específico -- por exemplo, pra achar qual sessão "
+            "corresponde a uma interface ou descrição conhecida. Só Huawei "
+            "por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
+        },
+    },
+    {
+        "name": "consultar_sessao_bgp_especifica",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) o estado resumido de UM "
+            "vizinho BGP (estado, AS, prefixos recebidos), já sabendo o IP "
+            "dele -- mais direto que listar_sessoes_bgp quando o IP já é "
+            "conhecido. Só Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+                "peer_ip": {"type": "string", "description": "IP do vizinho BGP"},
+            },
+            "required": ["hostid", "peer_ip"],
+        },
+    },
+    {
+        "name": "consultar_configuracao_bgp",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a configuração completa de "
+            "BGP do equipamento: AS local, vizinhos configurados, e qual "
+            "route-policy de entrada/saída está aplicada a cada um. Só "
+            "Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
+        },
+    },
+    {
+        "name": "consultar_configuracao_route_policy",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a configuração de todos os "
+            "filtros de rota (route-policy) usados nas sessões BGP -- o que "
+            "cada filtro de entrada/saída faz (permite, nega, ajusta "
+            "local-preference/as-path/community). Só Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
+        },
+    },
+    {
+        "name": "consultar_prefixos_ipv4",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) todos os prefixos IPv4 "
+            "cadastrados (ip-prefix) usados pelos filtros de BGP. Só "
+            "Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
+        },
+    },
+    {
+        "name": "consultar_prefixos_ipv6",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) todos os prefixos IPv6 "
+            "cadastrados (ipv6-prefix) usados pelos filtros de BGP. Só "
+            "Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
         },
     },
     {
@@ -138,6 +238,18 @@ async def call_agent_tool(base_url: str, token: str, name: str, args: dict) -> s
             resp = await client.get(f"{base_url}/api/agent-tools/routes/{args['hostid']}", headers=headers)
         elif name == "consultar_bgp_vizinho":
             resp = await client.post(f"{base_url}/api/agent-tools/bgp-prefixes", headers=headers, json=args)
+        elif name == "listar_sessoes_bgp":
+            resp = await client.post(f"{base_url}/api/agent-tools/bgp-peers", headers=headers, json=args)
+        elif name == "consultar_sessao_bgp_especifica":
+            resp = await client.post(f"{base_url}/api/agent-tools/bgp-peer-detail", headers=headers, json=args)
+        elif name == "consultar_configuracao_bgp":
+            resp = await client.post(f"{base_url}/api/agent-tools/bgp-config", headers=headers, json=args)
+        elif name == "consultar_configuracao_route_policy":
+            resp = await client.post(f"{base_url}/api/agent-tools/route-policy-config", headers=headers, json=args)
+        elif name == "consultar_prefixos_ipv4":
+            resp = await client.post(f"{base_url}/api/agent-tools/ip-prefix-list", headers=headers, json=args)
+        elif name == "consultar_prefixos_ipv6":
+            resp = await client.post(f"{base_url}/api/agent-tools/ipv6-prefix-list", headers=headers, json=args)
         elif name == "consultar_log_equipamento":
             resp = await client.post(f"{base_url}/api/agent-tools/device-logs", headers=headers, json=args)
         elif name == "consultar_configuracao_interface":
