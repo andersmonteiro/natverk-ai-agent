@@ -392,6 +392,7 @@ def create_client(
 def update_client_mcp(
     request: Request,
     client_id: int,
+    base_url: str = Form(""),
     zabbix_mcp_url: str = Form(""),
     zabbix_mcp_token: str = Form(""),
     agent_tools_token: str = Form(""),
@@ -404,6 +405,11 @@ def update_client_mcp(
         return redirect
     agent_client = db.query(AgentClient).filter(AgentClient.id == client_id).first()
     if agent_client:
+        # base_url é obrigatório na criação, nunca fica vazio depois --
+        # diferente de zabbix_mcp_url/whatsapp_health_url (opcionais, campo
+        # vazio = "desativar"), aqui vazio só significa "não mexeu".
+        if base_url:
+            agent_client.base_url = base_url
         agent_client.zabbix_mcp_url = zabbix_mcp_url or None
         agent_client.whatsapp_health_url = whatsapp_health_url or None
         # Tokens nunca voltam pro HTML (ver mask_token em clients.html) --

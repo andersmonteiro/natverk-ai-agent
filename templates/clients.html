@@ -93,9 +93,10 @@
         <button
           type="button"
           class="icon-btn edit-client-btn"
-          title="Editar MCP/tokens"
+          title="Editar"
           data-id="{{ c.id }}"
           data-name="{{ c.name }}"
+          data-base-url="{{ c.base_url }}"
           data-zabbix-mcp-url="{{ c.zabbix_mcp_url or '' }}"
           data-zabbix-token-masked="{{ c.zabbix_mcp_token | mask_token }}"
           data-agent-token-masked="{{ c.agent_tools_token | mask_token }}"
@@ -123,6 +124,9 @@
 <div class="modal" id="edit-modal">
   <h2 id="edit-modal-title">Editar cliente</h2>
   <form id="edit-form" method="post">
+    <label class="field-label" for="edit-base-url">URL base da VM do cliente</label>
+    <input type="url" id="edit-base-url" name="base_url" placeholder="https://painel.cliente.com.br" required>
+
     <label class="field-label" for="edit-zabbix-url">URL do Zabbix MCP Server</label>
     <input type="text" id="edit-zabbix-url" name="zabbix_mcp_url" placeholder="http://IP-do-cliente:porta/mcp">
 
@@ -172,6 +176,7 @@
       regenerateForm.dataset.clientName = name;
       deleteForm.action = `/admin/clients/${btn.dataset.id}/delete`;
       deleteForm.dataset.clientName = name;
+      document.getElementById('edit-base-url').value = btn.dataset.baseUrl || '';
       document.getElementById('edit-zabbix-url').value = btn.dataset.zabbixMcpUrl || '';
       document.getElementById('edit-zabbix-token').value = '';
       document.getElementById('edit-agent-token').value = '';
