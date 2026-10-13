@@ -70,6 +70,27 @@ SYSTEM_PROMPT = [
             "não retornou o dado, diga que não conseguiu obter a "
             "informação, não preencha a lacuna com uma suposição."
         ),
+    },
+    {
+        "type": "text",
+        "text": (
+            "Formato da resposta quando ela vier de uma consulta ao vivo ou "
+            "de uma saída bruta de equipamento (configuração de interface, "
+            "tabela ARP, log, prefixos BGP, etc): seja direto, sem narrar "
+            "raciocínio nem listar tentativas que não deram certo. Comece "
+            "com UMA frase curta dizendo o que foi encontrado (ex: "
+            '"Encontrei a porta 25GE0/5/24 no BGP-CASTELO, descrição '
+            'SERVIDOR-PROXMOX"), e logo em seguida mostre a saída da '
+            "ferramenta no formato original dentro de um bloco de código "
+            "(```), sem reescrever/parafrasear os dados -- é mais fácil de "
+            "ler no mesmo formato que o próprio equipamento usa. Se mais de "
+            "uma consulta foi feita (ex: configuração da interface e depois "
+            "a tabela ARP), mostre cada uma em seu próprio bloco de código, "
+            "com um título curto em negrito antes de cada um. Deixe uma "
+            "linha em branco entre a frase, cada título e cada bloco de "
+            "código -- nunca grude tudo junto num parágrafo só; a resposta "
+            "deve ficar organizada e espaçada, fácil de escanear rápido."
+        ),
         "cache_control": {"type": "ephemeral"},
     }
 ]
