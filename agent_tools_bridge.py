@@ -103,9 +103,12 @@ AGENT_TOOLS_DEFS = [
         "name": "consultar_configuracao_bgp",
         "description": (
             "Consulta AO VIVO (abre SSH na hora) a configuração completa de "
-            "BGP do equipamento: AS local, vizinhos configurados, e qual "
-            "route-policy de entrada/saída está aplicada a cada um. Só "
-            "Huawei por enquanto."
+            "BGP do equipamento: AS local, vizinhos configurados (inclusive "
+            "a DESCRIÇÃO de cada peer, ex: 'peer 10.163.151.2 description "
+            "MECHS-GTA-BGP'), e qual route-policy de entrada/saída está "
+            "aplicada a cada um. Use esta -- não listar_sessoes_bgp, que não "
+            "traz descrição -- quando precisar achar/identificar/ordenar um "
+            "vizinho pela descrição dele. Só Huawei por enquanto."
         ),
         "input_schema": {
             "type": "object",
