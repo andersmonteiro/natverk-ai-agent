@@ -504,6 +504,7 @@ def list_knowledge(request: Request, db: Session = Depends(get_db)):
 def create_knowledge(
     request: Request,
     vendor: str = Form(...),
+    model: str = Form(""),
     category: str = Form(...),
     command: str = Form(...),
     sample_output: str = Form(""),
@@ -516,6 +517,7 @@ def create_knowledge(
     db.add(
         CommandKnowledge(
             vendor=vendor,
+            model=model or None,
             category=category,
             command=command,
             sample_output=sample_output or None,
@@ -531,6 +533,7 @@ def update_knowledge(
     request: Request,
     entry_id: int,
     vendor: str = Form(...),
+    model: str = Form(""),
     category: str = Form(...),
     command: str = Form(...),
     sample_output: str = Form(""),
@@ -543,6 +546,7 @@ def update_knowledge(
     entry = db.query(CommandKnowledge).filter(CommandKnowledge.id == entry_id).first()
     if entry:
         entry.vendor = vendor
+        entry.model = model or None
         entry.category = category
         entry.command = command
         entry.sample_output = sample_output or None

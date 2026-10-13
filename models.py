@@ -59,6 +59,10 @@ class CommandKnowledge(Base):
 
     id = Column(Integer, primary_key=True)
     vendor = Column(String, nullable=False)  # "huawei" | "mikrotik" | "datacom" | "outro"
+    # None/vazio = vale pra qualquer modelo desse fabricante (regra geral);
+    # preenchido = exceção específica daquele modelo, quando ele usa um
+    # comando diferente do resto do fabricante pra mesma categoria.
+    model = Column(String, nullable=True)
     category = Column(String, nullable=False)  # ex: "Sinal óptico", "PPPoE conectados"
     command = Column(Text, nullable=False)
     sample_output = Column(Text, nullable=True)

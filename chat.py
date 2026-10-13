@@ -100,6 +100,7 @@ def on_startup():
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE agent_clients ADD COLUMN IF NOT EXISTS monthly_budget_usd FLOAT"))
         conn.execute(text("ALTER TABLE agent_clients ADD COLUMN IF NOT EXISTS whatsapp_health_url VARCHAR"))
+        conn.execute(text("ALTER TABLE command_knowledge ADD COLUMN IF NOT EXISTS model VARCHAR"))
 
 
 @app.get("/")

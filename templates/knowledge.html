@@ -20,8 +20,16 @@
     <p class="panel-subtitle">Cadastre o comando exato, uma saída de exemplo e o que ele faz</p>
     <form method="post" action="/admin/knowledge">
       <input type="hidden" name="vendor" value="{{ v }}">
-      <label class="field-label" for="category-{{ v }}">O que esse comando faz</label>
-      <input type="text" id="category-{{ v }}" name="category" placeholder="ex: Sinal óptico, VLANs, PPPoE conectados" required>
+      <div class="row2">
+        <div>
+          <label class="field-label" for="category-{{ v }}">O que esse comando faz</label>
+          <input type="text" id="category-{{ v }}" name="category" placeholder="ex: Sinal óptico, VLANs, PPPoE conectados" required>
+        </div>
+        <div>
+          <label class="field-label" for="model-{{ v }}">Modelo (opcional)</label>
+          <input type="text" id="model-{{ v }}" name="model" placeholder="em branco = vale pra qualquer modelo {{ v }}">
+        </div>
+      </div>
 
       <label class="field-label" for="command-{{ v }}">Comando real</label>
       <textarea id="command-{{ v }}" name="command" rows="2" placeholder="ex: display interface GigabitEthernet0/0/1 optical-info" required></textarea>
@@ -41,10 +49,11 @@
     <p class="panel-subtitle">{{ by_vendor[v] | length }} comando(s) pra {{ v }}</p>
     {% if by_vendor[v] %}
     <table>
-      <tr><th>Categoria</th><th>Comando</th><th>Observações</th><th></th></tr>
+      <tr><th>Categoria</th><th>Modelo</th><th>Comando</th><th>Observações</th><th></th></tr>
       {% for entry in by_vendor[v] %}
       <tr>
         <td>{{ entry.category }}</td>
+        <td>{{ entry.model or "Qualquer modelo" }}</td>
         <td class="mono">{{ entry.command }}</td>
         <td>{{ entry.description or "—" }}</td>
         <td>
@@ -54,6 +63,7 @@
             title="Editar"
             data-id="{{ entry.id }}"
             data-vendor="{{ entry.vendor }}"
+            data-model="{{ entry.model or '' }}"
             data-category="{{ entry.category }}"
             data-command="{{ entry.command }}"
             data-sample-output="{{ entry.sample_output or '' }}"
@@ -85,6 +95,9 @@
 
     <label class="field-label" for="edit-category">O que esse comando faz</label>
     <input type="text" id="edit-category" name="category" required>
+
+    <label class="field-label" for="edit-model">Modelo (opcional)</label>
+    <input type="text" id="edit-model" name="model" placeholder="em branco = vale pra qualquer modelo desse fabricante">
 
     <label class="field-label" for="edit-command">Comando real</label>
     <textarea id="edit-command" name="command" rows="2" required></textarea>
@@ -120,6 +133,7 @@
       form.action = `/admin/knowledge/${btn.dataset.id}`;
       deleteForm.action = `/admin/knowledge/${btn.dataset.id}/delete`;
       document.getElementById('edit-vendor').value = btn.dataset.vendor;
+      document.getElementById('edit-model').value = btn.dataset.model;
       document.getElementById('edit-category').value = btn.dataset.category;
       document.getElementById('edit-command').value = btn.dataset.command;
       document.getElementById('edit-sample-output').value = btn.dataset.sampleOutput;
