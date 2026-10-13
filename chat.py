@@ -95,6 +95,28 @@ SYSTEM_PROMPT = [
     }
 ]
 
+
+def build_system_prompt(client_name: str) -> list[dict]:
+    """SYSTEM_PROMPT + um bloco curto com o nome do cliente -- varia por
+    request (cada cliente tem o seu), por isso fica de fora do cache
+    (sem cache_control): só os blocos estáticos acima, idênticos pra
+    qualquer cliente, valem a pena cachear."""
+    return SYSTEM_PROMPT + [
+        {
+            "type": "text",
+            "text": (
+                f"Você atende o cliente \"{client_name}\". Quando a mensagem "
+                "for só uma saudação genérica (oi, teste, bom dia, boa tarde) "
+                "sem nenhum pedido técnico, responda curto e simples: "
+                "cumprimente a pessoa pelo nome se a mensagem começar com "
+                '"[Mensagem de NOME]:", diga que você é o agente de IA da '
+                f'Nätverk, e pergunte se ela precisa checar alguma '
+                f'informação da rede do cliente "{client_name}" -- sem '
+                "listar as suas capacidades em detalhe."
+            ),
+        },
+    ]
+
 app = FastAPI()
 app.add_middleware(
     SessionMiddleware,
@@ -243,6 +265,7 @@ async def run_with_tools(
     base_url: str | None,
     agent_tools_token: str | None,
     history: list[dict],
+    client_name: str,
 ):
     """Roda o loop Claude <-> (Zabbix MCP + agent_tools), transmitindo o
     texto da resposta em tempo real conforme o modelo gera (em vez de
@@ -271,12 +294,13 @@ async def run_with_tools(
         tools = tools + AGENT_TOOLS_DEFS
     tools = with_cache_breakpoint(tools)
 
+    system = build_system_prompt(client_name)
     messages = history + [{"role": "user", "content": message}]
     for _ in range(MAX_TOOL_TURNS):
         async with client.messages.stream(
             model=MODEL,
             max_tokens=MAX_TOKENS,
-            system=SYSTEM_PROMPT,
+            system=system,
             tools=tools,
             messages=messages,
         ) as stream:
@@ -329,13 +353,13 @@ async def run_with_tools(
     yield {"type": "final", "usage": usage, "tool_calls": tool_calls}
 
 
-async def run_plain_chat(message: str, history: list[dict]):
+async def run_plain_chat(message: str, history: list[dict], client_name: str):
     usage = Usage()
     messages = history + [{"role": "user", "content": message}]
     async with client.messages.stream(
         model=MODEL,
         max_tokens=MAX_TOKENS,
-        system=SYSTEM_PROMPT,
+        system=build_system_prompt(client_name),
         messages=messages,
     ) as stream:
         async for chunk in stream.text_stream:
@@ -413,10 +437,11 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
                 try:
                     if mcp_url:
                         gen = run_with_tools(
-                            req.message, mcp_url, mcp_token, base_url, agent_tools_token, history
+                            req.message, mcp_url, mcp_token, base_url, agent_tools_token, history,
+                            client_name,
                         )
                     else:
-                        gen = run_plain_chat(req.message, history)
+                        gen = run_plain_chat(req.message, history, client_name)
 
                     async for event in gen:
                         if event["type"] == "text":
