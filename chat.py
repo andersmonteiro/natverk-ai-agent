@@ -290,11 +290,11 @@ async def run_with_tools(
             )
         messages.append({"role": "user", "content": tool_results})
 
-        yield {
-            "type": "text",
-            "text": "Não consegui concluir a consulta (muitas chamadas de ferramenta em sequência).",
-        }
-        yield {"type": "final", "usage": usage, "tool_calls": tool_calls}
+    yield {
+        "type": "text",
+        "text": "Não consegui concluir a consulta (muitas chamadas de ferramenta em sequência).",
+    }
+    yield {"type": "final", "usage": usage, "tool_calls": tool_calls}
 
 
 async def run_plain_chat(message: str, history: list[dict]):
