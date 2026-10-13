@@ -221,62 +221,74 @@ async def run_with_tools(
     tool_calls: list[dict] = []
     has_agent_tools = bool(base_url and agent_tools_token)
 
+    # A sessão MCP fica aberta só pelo tempo mínimo necessário -- antes a
+    # MESMA sessão ficava aberta durante o loop inteiro (streaming da
+    # resposta do Claude + chamadas de ferramenta SSH incluídas), mesmo
+    # quando o turno não chamava nenhuma ferramenta do Zabbix MCP. A tarefa
+    # de reconexão em segundo plano da lib mcp (bug conhecido de
+    # reconexão, ver comentário em /chat) corria esse tempo todo à toa,
+    # e foi assim que uma pergunta resolvida só com ferramentas SSH (BGP
+    # de um vizinho) travou sem nunca ter chamado uma ferramenta MCP de
+    # verdade. Agora só abre uma sessão nova e curta: uma vez aqui pra
+    # listar o catálogo, e de novo bem no momento de cada chamada real a
+    # uma ferramenta do Zabbix MCP.
     async with mcp_session(mcp_url, mcp_token) as session:
         mcp_tools = (await session.list_tools()).tools
-        tools = mcp_tools_to_anthropic(mcp_tools)
-        if has_agent_tools:
-            tools = tools + AGENT_TOOLS_DEFS
-        tools = with_cache_breakpoint(tools)
+    tools = mcp_tools_to_anthropic(mcp_tools)
+    if has_agent_tools:
+        tools = tools + AGENT_TOOLS_DEFS
+    tools = with_cache_breakpoint(tools)
 
-        messages = history + [{"role": "user", "content": message}]
-        for _ in range(MAX_TOOL_TURNS):
-            async with client.messages.stream(
-                model=MODEL,
-                max_tokens=MAX_TOKENS,
-                system=SYSTEM_PROMPT,
-                tools=tools,
-                messages=messages,
-            ) as stream:
-                async for chunk in stream.text_stream:
-                    yield {"type": "text", "text": chunk}
-                response = await stream.get_final_message()
-            usage.add(response.usage)
+    messages = history + [{"role": "user", "content": message}]
+    for _ in range(MAX_TOOL_TURNS):
+        async with client.messages.stream(
+            model=MODEL,
+            max_tokens=MAX_TOKENS,
+            system=SYSTEM_PROMPT,
+            tools=tools,
+            messages=messages,
+        ) as stream:
+            async for chunk in stream.text_stream:
+                yield {"type": "text", "text": chunk}
+            response = await stream.get_final_message()
+        usage.add(response.usage)
 
-            if response.stop_reason != "tool_use":
-                yield {"type": "final", "usage": usage, "tool_calls": tool_calls}
-                return
+        if response.stop_reason != "tool_use":
+            yield {"type": "final", "usage": usage, "tool_calls": tool_calls}
+            return
 
-            messages.append({"role": "assistant", "content": response.content})
-            tool_results = []
-            for block in response.content:
-                if block.type != "tool_use":
-                    continue
-                if has_agent_tools and is_agent_tool(block.name):
-                    result_text = await call_agent_tool(
-                        base_url, agent_tools_token, block.name, block.input
-                    )
-                    is_error = result_text.startswith("Erro")
-                else:
+        messages.append({"role": "assistant", "content": response.content})
+        tool_results = []
+        for block in response.content:
+            if block.type != "tool_use":
+                continue
+            if has_agent_tools and is_agent_tool(block.name):
+                result_text = await call_agent_tool(
+                    base_url, agent_tools_token, block.name, block.input
+                )
+                is_error = result_text.startswith("Erro")
+            else:
+                async with mcp_session(mcp_url, mcp_token) as session:
                     result = await session.call_tool(block.name, block.input)
-                    result_text = mcp_result_to_text(result)
-                    is_error = bool(result.is_error)
-                tool_calls.append(
-                    {
-                        "name": block.name,
-                        "input": block.input,
-                        "result_chars": len(result_text),
-                        "result_preview": result_text[:300],
-                    }
-                )
-                tool_results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": result_text,
-                        "is_error": is_error,
-                    }
-                )
-            messages.append({"role": "user", "content": tool_results})
+                result_text = mcp_result_to_text(result)
+                is_error = bool(result.is_error)
+            tool_calls.append(
+                {
+                    "name": block.name,
+                    "input": block.input,
+                    "result_chars": len(result_text),
+                    "result_preview": result_text[:300],
+                }
+            )
+            tool_results.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": result_text,
+                    "is_error": is_error,
+                }
+            )
+        messages.append({"role": "user", "content": tool_results})
 
         yield {
             "type": "text",
