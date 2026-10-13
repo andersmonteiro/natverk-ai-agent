@@ -4,49 +4,41 @@
 <h1>Base de Conhecimento</h1>
 <p class="subtitle">Comandos reais de equipamento, por fabricante -- usado como referência pra implementar as ferramentas do agente, nunca consultado por ele em tempo real</p>
 
-<div class="card">
-  <h2>Novo comando</h2>
-  <p class="panel-subtitle">Cadastre o comando exato, uma saída de exemplo e o que ele faz</p>
-  <form method="post" action="/admin/knowledge">
-    <div class="row2">
-      <div>
-        <label class="field-label" for="vendor">Fabricante</label>
-        <select id="vendor" name="vendor" required>
-          {% for v in vendors %}
-          <option value="{{ v }}">{{ v | capitalize }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div>
-        <label class="field-label" for="category">O que esse comando faz</label>
-        <input type="text" id="category" name="category" placeholder="ex: Sinal óptico, VLANs, PPPoE conectados" required>
-      </div>
-    </div>
-    <label class="field-label" for="command">Comando real</label>
-    <textarea id="command" name="command" rows="2" placeholder="ex: display interface GigabitEthernet0/0/1 optical-info" required></textarea>
-
-    <label class="field-label" for="sample_output">Saída de exemplo (opcional)</label>
-    <textarea id="sample_output" name="sample_output" rows="5" placeholder="Cole aqui a saída real do equipamento pra esse comando"></textarea>
-
-    <label class="field-label" for="description">Observações / explicação (opcional)</label>
-    <textarea id="description" name="description" rows="2" placeholder="O que esse comando mostra, quando usar, particularidades"></textarea>
-
-    <button type="submit">Adicionar comando</button>
-  </form>
+<div class="knowledge-tabs">
+  {% for v in vendors %}
+  <button type="button" class="knowledge-tab{% if loop.first %} active{% endif %}" data-vendor="{{ v }}">
+    {{ v | capitalize }}
+    <span class="knowledge-tab-count">{{ by_vendor[v] | length }}</span>
+  </button>
+  {% endfor %}
 </div>
 
-<div class="card">
-  <div class="knowledge-tabs">
-    {% for v in vendors %}
-    <button type="button" class="knowledge-tab{% if loop.first %} active{% endif %}" data-vendor="{{ v }}">
-      {{ v | capitalize }}
-      <span class="knowledge-tab-count">{{ by_vendor[v] | length }}</span>
-    </button>
-    {% endfor %}
+{% for v in vendors %}
+<div class="knowledge-panel{% if loop.first %} active{% endif %}" data-vendor-panel="{{ v }}">
+  <div class="card">
+    <h2>Novo comando — {{ v | capitalize }}</h2>
+    <p class="panel-subtitle">Cadastre o comando exato, uma saída de exemplo e o que ele faz</p>
+    <form method="post" action="/admin/knowledge">
+      <input type="hidden" name="vendor" value="{{ v }}">
+      <label class="field-label" for="category-{{ v }}">O que esse comando faz</label>
+      <input type="text" id="category-{{ v }}" name="category" placeholder="ex: Sinal óptico, VLANs, PPPoE conectados" required>
+
+      <label class="field-label" for="command-{{ v }}">Comando real</label>
+      <textarea id="command-{{ v }}" name="command" rows="2" placeholder="ex: display interface GigabitEthernet0/0/1 optical-info" required></textarea>
+
+      <label class="field-label" for="sample_output-{{ v }}">Saída de exemplo (opcional)</label>
+      <textarea id="sample_output-{{ v }}" name="sample_output" rows="5" placeholder="Cole aqui a saída real do equipamento pra esse comando"></textarea>
+
+      <label class="field-label" for="description-{{ v }}">Observações / explicação (opcional)</label>
+      <textarea id="description-{{ v }}" name="description" rows="2" placeholder="O que esse comando mostra, quando usar, particularidades"></textarea>
+
+      <button type="submit">Adicionar comando</button>
+    </form>
   </div>
 
-  {% for v in vendors %}
-  <div class="knowledge-panel{% if loop.first %} active{% endif %}" data-vendor-panel="{{ v }}">
+  <div class="card">
+    <h2>Comandos cadastrados</h2>
+    <p class="panel-subtitle">{{ by_vendor[v] | length }} comando(s) pra {{ v }}</p>
     {% if by_vendor[v] %}
     <table>
       <tr><th>Categoria</th><th>Comando</th><th>Observações</th><th></th></tr>
@@ -77,8 +69,8 @@
     <p class="empty">Nenhum comando cadastrado pra {{ v }} ainda.</p>
     {% endif %}
   </div>
-  {% endfor %}
 </div>
+{% endfor %}
 
 <div class="backdrop" id="backdrop"></div>
 <div class="modal" id="edit-modal">
