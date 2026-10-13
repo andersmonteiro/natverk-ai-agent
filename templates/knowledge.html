@@ -29,6 +29,10 @@
           <label class="field-label" for="model-{{ v }}">Modelo (opcional)</label>
           <input type="text" id="model-{{ v }}" name="model" placeholder="em branco = vale pra qualquer modelo {{ v }}">
         </div>
+        <div>
+          <label class="field-label" for="equipment_function-{{ v }}">Função do equipamento (opcional)</label>
+          <input type="text" id="equipment_function-{{ v }}" name="equipment_function" placeholder="ex: Switch, Roteador, OLT">
+        </div>
       </div>
 
       <label class="field-label" for="command-{{ v }}">Comando real</label>
@@ -48,11 +52,18 @@
     <h2>Comandos cadastrados</h2>
     <p class="panel-subtitle">{{ by_vendor[v] | length }} comando(s) pra {{ v }}</p>
     {% if by_vendor[v] %}
+    <div class="knowledge-filter">
+      <label class="field-label" for="function-filter-{{ v }}">Filtrar por função</label>
+      <select id="function-filter-{{ v }}" class="function-filter" data-vendor-filter="{{ v }}">
+        <option value="">Todas</option>
+      </select>
+    </div>
     <table>
-      <tr><th>Categoria</th><th>Modelo</th><th>Comando</th><th>Observações</th><th></th></tr>
+      <tr><th>Categoria</th><th>Função</th><th>Modelo</th><th>Comando</th><th>Observações</th><th></th></tr>
       {% for entry in by_vendor[v] %}
-      <tr>
+      <tr data-function="{{ entry.equipment_function or '' }}">
         <td>{{ entry.category }}</td>
+        <td>{{ entry.equipment_function or "—" }}</td>
         <td>{{ entry.model or "Qualquer modelo" }}</td>
         <td class="mono">{{ entry.command }}</td>
         <td>{{ entry.description or "—" }}</td>
@@ -64,6 +75,7 @@
             data-id="{{ entry.id }}"
             data-vendor="{{ entry.vendor }}"
             data-model="{{ entry.model or '' }}"
+            data-equipment-function="{{ entry.equipment_function or '' }}"
             data-category="{{ entry.category }}"
             data-command="{{ entry.command }}"
             data-sample-output="{{ entry.sample_output or '' }}"
@@ -98,6 +110,9 @@
 
     <label class="field-label" for="edit-model">Modelo (opcional)</label>
     <input type="text" id="edit-model" name="model" placeholder="em branco = vale pra qualquer modelo desse fabricante">
+
+    <label class="field-label" for="edit-equipment-function">Função do equipamento (opcional)</label>
+    <input type="text" id="edit-equipment-function" name="equipment_function" placeholder="ex: Switch, Roteador, OLT">
 
     <label class="field-label" for="edit-command">Comando real</label>
     <textarea id="edit-command" name="command" rows="2" required></textarea>
@@ -134,6 +149,7 @@
       deleteForm.action = `/admin/knowledge/${btn.dataset.id}/delete`;
       document.getElementById('edit-vendor').value = btn.dataset.vendor;
       document.getElementById('edit-model').value = btn.dataset.model;
+      document.getElementById('edit-equipment-function').value = btn.dataset.equipmentFunction;
       document.getElementById('edit-category').value = btn.dataset.category;
       document.getElementById('edit-command').value = btn.dataset.command;
       document.getElementById('edit-sample-output').value = btn.dataset.sampleOutput;
@@ -150,6 +166,27 @@
   });
 
   backdrop.addEventListener('click', closeEditModal);
+
+  // Filtro por função do equipamento -- as opções vêm das próprias linhas
+  // já renderizadas (nada de bater no backend de novo só pra filtrar uma
+  // tabela que já está na página).
+  document.querySelectorAll('.function-filter').forEach((select) => {
+    const vendor = select.dataset.vendorFilter;
+    const panel = document.querySelector(`.knowledge-panel[data-vendor-panel="${vendor}"]`);
+    const rows = panel.querySelectorAll('table tr[data-function]');
+    const functions = [...new Set([...rows].map((r) => r.dataset.function).filter(Boolean))].sort();
+    functions.forEach((fn) => {
+      const opt = document.createElement('option');
+      opt.value = fn;
+      opt.textContent = fn;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => {
+      rows.forEach((row) => {
+        row.style.display = !select.value || row.dataset.function === select.value ? '' : 'none';
+      });
+    });
+  });
 
   document.querySelectorAll('.knowledge-tab').forEach((tab) => {
     tab.addEventListener('click', () => {

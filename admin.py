@@ -509,6 +509,7 @@ def create_knowledge(
     request: Request,
     vendor: str = Form(...),
     model: str = Form(""),
+    equipment_function: str = Form(""),
     category: str = Form(...),
     command: str = Form(...),
     sample_output: str = Form(""),
@@ -522,6 +523,7 @@ def create_knowledge(
         CommandKnowledge(
             vendor=vendor,
             model=model or None,
+            equipment_function=equipment_function or None,
             category=category,
             command=command,
             sample_output=sample_output or None,
@@ -538,6 +540,7 @@ def update_knowledge(
     entry_id: int,
     vendor: str = Form(...),
     model: str = Form(""),
+    equipment_function: str = Form(""),
     category: str = Form(...),
     command: str = Form(...),
     sample_output: str = Form(""),
@@ -551,6 +554,7 @@ def update_knowledge(
     if entry:
         entry.vendor = vendor
         entry.model = model or None
+        entry.equipment_function = equipment_function or None
         entry.category = category
         entry.command = command
         entry.sample_output = sample_output or None

@@ -63,6 +63,11 @@ class CommandKnowledge(Base):
     # preenchido = exceção específica daquele modelo, quando ele usa um
     # comando diferente do resto do fabricante pra mesma categoria.
     model = Column(String, nullable=True)
+    # Função do equipamento (ex: "Switch", "Roteador", "OLT") -- um mesmo
+    # vendor/model pode ter equipamentos com papéis bem diferentes na rede,
+    # e a lista de comandos cadastrados cresce rápido; essa coluna é só pra
+    # filtrar a tabela, não afeta o comando em si.
+    equipment_function = Column(String, nullable=True)
     category = Column(String, nullable=False)  # ex: "Sinal óptico", "PPPoE conectados"
     command = Column(Text, nullable=False)
     sample_output = Column(Text, nullable=True)

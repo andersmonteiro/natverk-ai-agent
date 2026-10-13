@@ -842,6 +842,23 @@ h2 {
   display: block;
 }
 
+.knowledge-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.knowledge-filter .field-label {
+  margin: 0;
+}
+
+.knowledge-filter select {
+  width: auto;
+  min-width: 180px;
+  margin-bottom: 0;
+}
+
 #regenerate-token-form {
   margin-top: 14px;
   padding-top: 14px;
