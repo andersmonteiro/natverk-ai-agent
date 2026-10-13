@@ -1,6 +1,9 @@
-# Claude Sonnet 5 pricing, USD per million tokens.
-INPUT_PRICE_PER_M = 2.0
-OUTPUT_PRICE_PER_M = 10.0
+# Preço por milhão de tokens -- precisa acompanhar o MODEL em chat.py pro
+# painel de custo/orçamento mensal não mentir. Testando Haiku 5.5 por
+# custo; valores de Sonnet 5 ficam comentados do lado pra reverter junto
+# se o MODEL voltar.
+INPUT_PRICE_PER_M = 0.10   # Sonnet 5: 2.0
+OUTPUT_PRICE_PER_M = 0.50  # Sonnet 5: 10.0
 
 # Prompt caching multipliers (standard across Claude models): writing to
 # cache costs more than a normal input token, reading from cache costs

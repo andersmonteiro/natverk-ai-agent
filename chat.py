@@ -27,7 +27,10 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-MODEL = "claude-sonnet-5"
+# Testando Haiku por custo (~20x mais barato que Sonnet) -- se a qualidade
+# das respostas não for boa o suficiente depois de validar com uso real,
+# é só trocar essa linha de volta pra "claude-sonnet-5".
+MODEL = "claude-haiku-5-5"
 MAX_TOOL_TURNS = 8
 # 1024 era curto demais pra uma resposta com raciocínio + narrativa de
 # várias chamadas de ferramenta em sequência -- risco real de cortar a
