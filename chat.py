@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 import admin
-from agent_tools_bridge import AGENT_TOOLS_DEFS, call_agent_tool, is_agent_tool
+from agent_tools_bridge import AGENT_TOOLS_DEFS, call_agent_tool, is_agent_tool, resolve_sender_name
 from client_auth import resolve_client
 from db import Base, SessionLocal, engine
 from mcp_bridge import mcp_result_to_text, mcp_session, mcp_tools_to_anthropic, with_cache_breakpoint
@@ -96,23 +96,25 @@ SYSTEM_PROMPT = [
 ]
 
 
-def build_system_prompt(client_name: str) -> list[dict]:
-    """SYSTEM_PROMPT + um bloco curto com o nome do cliente -- varia por
-    request (cada cliente tem o seu), por isso fica de fora do cache
-    (sem cache_control): só os blocos estáticos acima, idênticos pra
-    qualquer cliente, valem a pena cachear."""
+def build_system_prompt(client_name: str, sender_name: str | None = None) -> list[dict]:
+    """SYSTEM_PROMPT + um bloco curto com o nome do cliente (e, se
+    resolvido via resolve_sender_name, o nome de quem está perguntando) --
+    varia por request (cada cliente/remetente é diferente), por isso fica
+    de fora do cache (sem cache_control): só os blocos estáticos acima,
+    idênticos pra qualquer cliente, valem a pena cachear."""
+    quem = f' A pessoa que está perguntando se chama "{sender_name}".' if sender_name else ""
     return SYSTEM_PROMPT + [
         {
             "type": "text",
             "text": (
-                f"Você atende o cliente \"{client_name}\". Quando a mensagem "
-                "for só uma saudação genérica (oi, teste, bom dia, boa tarde) "
-                "sem nenhum pedido técnico, responda curto e simples: "
-                "cumprimente a pessoa pelo nome se a mensagem começar com "
-                '"[Mensagem de NOME]:", diga que você é o agente de IA da '
-                f'Nätverk, e pergunte se ela precisa checar alguma '
-                f'informação da rede do cliente "{client_name}" -- sem '
-                "listar as suas capacidades em detalhe."
+                f'Você atende o cliente "{client_name}".{quem} Quando a '
+                "mensagem for só uma saudação genérica (oi, teste, bom dia, "
+                "boa tarde) sem nenhum pedido técnico, responda curto e "
+                "simples: cumprimente a pessoa pelo nome se você souber "
+                "qual é, diga que você é o agente de IA da Nätverk, e "
+                f'pergunte se ela precisa checar alguma informação da rede '
+                f'do cliente "{client_name}" -- sem listar as suas '
+                "capacidades em detalhe."
             ),
         },
     ]
@@ -165,6 +167,12 @@ class ChatRequest(BaseModel):
     # conversation_id (ex: o ID do chat do WhatsApp), o histórico da
     # conversa é carregado e o agente mantém contexto entre mensagens.
     conversation_id: str | None = None
+    # Telefone de quem mandou a mensagem (bot do WhatsApp) -- usado pra
+    # resolver o nome de exibição via /api/agent-tools/user-by-phone (ver
+    # resolve_sender_name) e logado no audit log mesmo quando o número não
+    # está vinculado a nenhum usuário (ver /chat), pra saber quem chamou o
+    # agente via WhatsApp mesmo sem estar cadastrado.
+    sender_phone: str | None = None
 
 
 @app.get("/health")
@@ -266,6 +274,7 @@ async def run_with_tools(
     agent_tools_token: str | None,
     history: list[dict],
     client_name: str,
+    sender_name: str | None = None,
 ):
     """Roda o loop Claude <-> (Zabbix MCP + agent_tools), transmitindo o
     texto da resposta em tempo real conforme o modelo gera (em vez de
@@ -294,7 +303,7 @@ async def run_with_tools(
         tools = tools + AGENT_TOOLS_DEFS
     tools = with_cache_breakpoint(tools)
 
-    system = build_system_prompt(client_name)
+    system = build_system_prompt(client_name, sender_name)
     messages = history + [{"role": "user", "content": message}]
     for _ in range(MAX_TOOL_TURNS):
         async with client.messages.stream(
@@ -353,13 +362,13 @@ async def run_with_tools(
     yield {"type": "final", "usage": usage, "tool_calls": tool_calls}
 
 
-async def run_plain_chat(message: str, history: list[dict], client_name: str):
+async def run_plain_chat(message: str, history: list[dict], client_name: str, sender_name: str | None = None):
     usage = Usage()
     messages = history + [{"role": "user", "content": message}]
     async with client.messages.stream(
         model=MODEL,
         max_tokens=MAX_TOKENS,
-        system=build_system_prompt(client_name),
+        system=build_system_prompt(client_name, sender_name),
         messages=messages,
     ) as stream:
         async for chunk in stream.text_stream:
@@ -402,6 +411,7 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
             db.add(
                 AgentAuditLog(
                     client_name=client_name,
+                    user=req.sender_phone,
                     tool_name="budget_blocked",
                     request_summary=req.message,
                     response_summary=msg,
@@ -419,6 +429,13 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
             return
 
         history = load_history(db, client_name, conversation_id)
+
+        # Resolvido uma vez por request (não por tentativa) -- um telefone
+        # sem usuário vinculado é esperado (None), não repete a consulta
+        # no retry por causa disso.
+        sender_name = None
+        if req.sender_phone and base_url and agent_tools_token:
+            sender_name = await resolve_sender_name(base_url, agent_tools_token, req.sender_phone)
 
         # A lib mcp tem um bug de reconexão conhecido (ver issues #3307/
         # #3257/#3522 do modelcontextprotocol/python-sdk) que às vezes tenta
@@ -438,10 +455,10 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
                     if mcp_url:
                         gen = run_with_tools(
                             req.message, mcp_url, mcp_token, base_url, agent_tools_token, history,
-                            client_name,
+                            client_name, sender_name,
                         )
                     else:
-                        gen = run_plain_chat(req.message, history, client_name)
+                        gen = run_plain_chat(req.message, history, client_name, sender_name)
 
                     async for event in gen:
                         if event["type"] == "text":
@@ -498,9 +515,14 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
                 # isso só preserva o detalhe pra quem for investigar depois.
                 prefix = f"ERRO: {error_message}"
                 response_summary = f"{prefix}\n{response_summary}" if response_summary else prefix
+            log_user = (
+                f"{sender_name} ({req.sender_phone})" if sender_name and req.sender_phone
+                else req.sender_phone
+            )
             db.add(
                 AgentAuditLog(
                     client_name=client_name,
+                    user=log_user,
                     tool_name=", ".join(dict.fromkeys(tool_names)) or "chat",
                     request_summary=request_summary or None,
                     response_summary=response_summary or None,

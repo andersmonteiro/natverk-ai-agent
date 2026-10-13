@@ -153,3 +153,22 @@ async def call_agent_tool(base_url: str, token: str, name: str, args: dict) -> s
         except Exception:
             return f"Erro HTTP {resp.status_code}: {resp.text[:300]}"
     return resp.text
+
+
+async def resolve_sender_name(base_url: str, token: str, sender_phone: str) -> str | None:
+    """Consulta o cadastro de usuários do map/ (não é uma ferramenta que o
+    modelo chama, é resolvido aqui antes de montar o system prompt) --
+    None quando o telefone não está vinculado a nenhum usuário, o que é
+    esperado e não um erro: o número ainda é logado no audit log mesmo
+    sem nome resolvido."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{base_url}/api/agent-tools/user-by-phone/{sender_phone}",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        if resp.status_code != 200:
+            return None
+        return resp.json().get("display_name")
+    except Exception:
+        return None
