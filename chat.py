@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 import os
 import time
 import uuid
@@ -23,6 +24,8 @@ from models import AgentAuditLog, AgentClient, AgentConversationMessage
 from pricing import cost_usd
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 MODEL = "claude-sonnet-5"
 MAX_TOOL_TURNS = 8
@@ -367,7 +370,19 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
                     tool_calls = event["tool_calls"]
         except Exception as exc:
             status = "error"
-            error_message = str(exc)[:500]
+            # unhandled errors in a TaskGroup (ExceptionGroup, Python 3.11+)
+            # esconde a causa real atrás de uma mensagem genérica -- sem
+            # isso não dava pra saber se o problema era no SSE do MCP, na
+            # chamada à Anthropic, ou na agent_tools_bridge. logger.exception
+            # imprime o traceback completo (inclusive das sub-exceptions do
+            # grupo) no stdout do container; o audit log abaixo guarda só um
+            # resumo curto pra não inflar o banco.
+            logger.exception("Erro ao processar /chat (cliente=%s)", client_name)
+            detail = str(exc)
+            sub_exceptions = getattr(exc, "exceptions", None)
+            if sub_exceptions:
+                detail = " | ".join(f"{type(e).__name__}: {e}" for e in sub_exceptions)
+            error_message = detail[:500]
             yield (
                 "data: Desculpe, ocorreu um erro ao processar sua pergunta. "
                 "Tente novamente em instantes.\n\n"
