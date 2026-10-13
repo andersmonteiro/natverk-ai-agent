@@ -96,12 +96,24 @@ SYSTEM_PROMPT = [
 ]
 
 
+def format_client_display_name(name: str) -> str:
+    """client_name vem cru do cadastro (ex: "wnp", minúsculo) -- feio
+    numa frase de verdade. Nome de uma palavra só e curto (sigla, tipo
+    "wnp") vira maiúsculo total; qualquer outro caso (mais de uma
+    palavra, ou uma palavra mais longa) vira Title Case."""
+    words = name.split()
+    if len(words) == 1 and len(words[0]) <= 4:
+        return name.upper()
+    return name.title()
+
+
 def build_system_prompt(client_name: str, sender_name: str | None = None) -> list[dict]:
     """SYSTEM_PROMPT + um bloco curto com o nome do cliente (e, se
     resolvido via resolve_sender_name, o nome de quem está perguntando) --
     varia por request (cada cliente/remetente é diferente), por isso fica
     de fora do cache (sem cache_control): só os blocos estáticos acima,
     idênticos pra qualquer cliente, valem a pena cachear."""
+    client_name = format_client_display_name(client_name)
     quem = f' A pessoa que está perguntando se chama "{sender_name}".' if sender_name else ""
     return SYSTEM_PROMPT + [
         {
