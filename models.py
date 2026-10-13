@@ -45,6 +45,27 @@ class AgentConversationMessage(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
+class CommandKnowledge(Base):
+    """Catálogo de comandos reais de equipamento, por fabricante --
+    cadastrado pelo operador no painel (/admin/knowledge), nunca pelo
+    agente de IA. Serve como referência pra implementar/corrigir as
+    ferramentas de SSH (ssh_tools.py no lado de cada cliente): o
+    operador cadastra o comando exato + uma saída de exemplo + o que
+    ele faz, evitando adivinhar/buscar comandos de equipamento de rede
+    de produção na internet. Não é consultado em runtime pelo agente --
+    é puramente documentação estruturada."""
+
+    __tablename__ = "command_knowledge"
+
+    id = Column(Integer, primary_key=True)
+    vendor = Column(String, nullable=False)  # "huawei" | "mikrotik" | "datacom" | "outro"
+    category = Column(String, nullable=False)  # ex: "Sinal óptico", "PPPoE conectados"
+    command = Column(Text, nullable=False)
+    sample_output = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
 class AgentAuditLog(Base):
     __tablename__ = "agent_audit_log"
 

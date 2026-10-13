@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from auth import check_credentials, require_admin
 from client_auth import hash_token
 from db import get_db
-from models import AgentAuditLog, AgentClient
+from models import AgentAuditLog, AgentClient, CommandKnowledge
 from pricing import cost_usd
 
 router = APIRouter(prefix="/admin")
@@ -476,3 +476,88 @@ def list_audit(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         "audit.html", {"request": request, "entries": entries}
     )
+
+
+VENDORS = ["huawei", "mikrotik", "datacom", "outro"]
+
+
+@router.get("/knowledge")
+def list_knowledge(request: Request, db: Session = Depends(get_db)):
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+    entries = (
+        db.query(CommandKnowledge)
+        .order_by(CommandKnowledge.vendor, CommandKnowledge.category)
+        .all()
+    )
+    by_vendor = {v: [] for v in VENDORS}
+    for e in entries:
+        by_vendor.setdefault(e.vendor, []).append(e)
+    return templates.TemplateResponse(
+        "knowledge.html",
+        {"request": request, "vendors": VENDORS, "by_vendor": by_vendor},
+    )
+
+
+@router.post("/knowledge")
+def create_knowledge(
+    request: Request,
+    vendor: str = Form(...),
+    category: str = Form(...),
+    command: str = Form(...),
+    sample_output: str = Form(""),
+    description: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+    db.add(
+        CommandKnowledge(
+            vendor=vendor,
+            category=category,
+            command=command,
+            sample_output=sample_output or None,
+            description=description or None,
+        )
+    )
+    db.commit()
+    return RedirectResponse(url="/admin/knowledge", status_code=303)
+
+
+@router.post("/knowledge/{entry_id}")
+def update_knowledge(
+    request: Request,
+    entry_id: int,
+    vendor: str = Form(...),
+    category: str = Form(...),
+    command: str = Form(...),
+    sample_output: str = Form(""),
+    description: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+    entry = db.query(CommandKnowledge).filter(CommandKnowledge.id == entry_id).first()
+    if entry:
+        entry.vendor = vendor
+        entry.category = category
+        entry.command = command
+        entry.sample_output = sample_output or None
+        entry.description = description or None
+        db.commit()
+    return RedirectResponse(url="/admin/knowledge", status_code=303)
+
+
+@router.post("/knowledge/{entry_id}/delete")
+def delete_knowledge(request: Request, entry_id: int, db: Session = Depends(get_db)):
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+    entry = db.query(CommandKnowledge).filter(CommandKnowledge.id == entry_id).first()
+    if entry:
+        db.delete(entry)
+        db.commit()
+    return RedirectResponse(url="/admin/knowledge", status_code=303)
