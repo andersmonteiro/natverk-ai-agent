@@ -165,6 +165,105 @@ AGENT_TOOLS_DEFS = [
         },
     },
     {
+        "name": "consultar_resumo_pppoe",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) o TOTAL consolidado de "
+            "assinantes PPPoE conectados agora (total geral, IPv4, IPv6, "
+            "Dual-Stack, por domínio, etc). Use esta -- não "
+            "listar_sessoes_pppoe -- quando a pergunta for 'quantos "
+            "clientes PPPoE estão conectados', já que traz o total pronto "
+            "em vez de uma lista longa pra contar manualmente. Só Huawei "
+            "por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
+        },
+    },
+    {
+        "name": "listar_sessoes_pppoe",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a lista completa de "
+            "sessões PPPoE conectadas, uma por assinante: login, VLAN, "
+            "interface do PPPoE Server, IP e MAC. Pode ser uma lista longa "
+            "(centenas de linhas) -- pra só saber o total, use "
+            "consultar_resumo_pppoe. Só Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
+        },
+    },
+    {
+        "name": "consultar_pppoe_por_vlan",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a(s) sessão(ões) PPPoE de "
+            "uma VLAN de assinante específica. Só Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+                "pevlan": {"type": "string", "description": "Número da VLAN do assinante"},
+            },
+            "required": ["hostid", "pevlan"],
+        },
+    },
+    {
+        "name": "consultar_pppoe_por_login",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a sessão PPPoE de um "
+            "assinante pelo login (ou parte dele). Só Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+                "username_fragment": {"type": "string", "description": "Login do assinante, ou parte dele"},
+            },
+            "required": ["hostid", "username_fragment"],
+        },
+    },
+    {
+        "name": "consultar_uso_pool_pppoe",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a capacidade das pools de "
+            "IP usadas pelos domínios PPPoE: total, usado e porcentagem de "
+            "ocupação por domínio. Use pra saber se uma pool está perto de "
+            "esgotar. Só Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
+        },
+    },
+    {
+        "name": "consultar_falha_autenticacao_pppoe",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) o registro de falha de "
+            "autenticação AAA de assinantes PPPoE de uma VLAN -- pra achar "
+            "clientes bloqueados/rejeitados pelo RADIUS, senha/login "
+            "errados, etc. Só Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+                "pevlan": {"type": "string", "description": "Número da VLAN do assinante"},
+            },
+            "required": ["hostid", "pevlan"],
+        },
+    },
+    {
         "name": "consultar_log_equipamento",
         "description": (
             "Consulta AO VIVO (abre SSH na hora) o log do próprio equipamento, "
@@ -253,6 +352,18 @@ async def call_agent_tool(base_url: str, token: str, name: str, args: dict) -> s
             resp = await client.post(f"{base_url}/api/agent-tools/ip-prefix-list", headers=headers, json=args)
         elif name == "consultar_prefixos_ipv6":
             resp = await client.post(f"{base_url}/api/agent-tools/ipv6-prefix-list", headers=headers, json=args)
+        elif name == "consultar_resumo_pppoe":
+            resp = await client.post(f"{base_url}/api/agent-tools/pppoe-summary", headers=headers, json=args)
+        elif name == "listar_sessoes_pppoe":
+            resp = await client.post(f"{base_url}/api/agent-tools/pppoe-sessions", headers=headers, json=args)
+        elif name == "consultar_pppoe_por_vlan":
+            resp = await client.post(f"{base_url}/api/agent-tools/pppoe-session-by-vlan", headers=headers, json=args)
+        elif name == "consultar_pppoe_por_login":
+            resp = await client.post(f"{base_url}/api/agent-tools/pppoe-session-by-username", headers=headers, json=args)
+        elif name == "consultar_uso_pool_pppoe":
+            resp = await client.post(f"{base_url}/api/agent-tools/pppoe-pool-usage", headers=headers, json=args)
+        elif name == "consultar_falha_autenticacao_pppoe":
+            resp = await client.post(f"{base_url}/api/agent-tools/pppoe-aaa-fail-record", headers=headers, json=args)
         elif name == "consultar_log_equipamento":
             resp = await client.post(f"{base_url}/api/agent-tools/device-logs", headers=headers, json=args)
         elif name == "consultar_configuracao_interface":
