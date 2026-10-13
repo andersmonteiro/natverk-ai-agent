@@ -13,7 +13,12 @@ AGENT_TOOLS_DEFS = [
             "Vem de um cache atualizado a cada poucos minutos, não de uma "
             "consulta ao vivo -- use para perguntas sobre configuração "
             "(IP de uma interface, qual porta vai para tal localidade, "
-            "sinal óptico de uma porta), nunca para estado em tempo real."
+            "sinal óptico de uma porta), nunca para estado em tempo real. "
+            "Resposta: {interfaces: [...], note?: string}. Se vier 'note', "
+            "a lista está vazia porque o cache ainda não tem dado pra esse "
+            "host (não porque o host não tem interfaces de verdade) -- "
+            "nunca conclua que o equipamento não tem interfaces com base "
+            "numa lista vazia, diga que não conseguiu obter o dado ainda."
         ),
         "input_schema": {
             "type": "object",
@@ -25,7 +30,14 @@ AGENT_TOOLS_DEFS = [
     },
     {
         "name": "listar_rotas_estaticas",
-        "description": "Lista as rotas estáticas configuradas num equipamento (cache, não ao vivo).",
+        "description": (
+            "Lista as rotas estáticas configuradas num equipamento (cache, "
+            "não ao vivo). Resposta: {routes: [...], note?: string}. Se "
+            "vier 'note', a lista está vazia porque o cache ainda não tem "
+            "dado pra esse host -- nunca conclua que o equipamento não tem "
+            "rotas com base numa lista vazia, diga que não conseguiu obter "
+            "o dado ainda."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
