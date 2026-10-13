@@ -76,6 +76,50 @@ AGENT_TOOLS_DEFS = [
             "required": ["hostid"],
         },
     },
+    {
+        "name": "consultar_configuracao_interface",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a configuração completa de "
+            "UMA interface -- todos os IPs/sub-IPs configurados nela, modo da "
+            "porta, vlans, etc. Diferente de listar_interfaces_equipamento "
+            "(cache): aquela só traz o IP principal, esta traz TODOS os IPs "
+            "configurados na porta (inclusive endereços secundários/'sub'). "
+            "Use listar_interfaces_equipamento primeiro pra achar o nome "
+            "exato da interface certa (ex: pela descrição), e só então chame "
+            "esta com o nome exato retornado de lá."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+                "interface": {
+                    "type": "string",
+                    "description": "Nome exato da interface, como retornado por listar_interfaces_equipamento",
+                },
+            },
+            "required": ["hostid", "interface"],
+        },
+    },
+    {
+        "name": "consultar_arp_interface",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a tabela ARP filtrada por "
+            "uma interface -- mostra quais dos IPs configurados nessa porta "
+            "(ver consultar_configuracao_interface) estão de fato em uso por "
+            "algum equipamento agora, e o MAC de quem está usando."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+                "interface": {
+                    "type": "string",
+                    "description": "Nome exato da interface, como retornado por listar_interfaces_equipamento",
+                },
+            },
+            "required": ["hostid", "interface"],
+        },
+    },
 ]
 
 _TOOL_NAMES = {t["name"] for t in AGENT_TOOLS_DEFS}
@@ -96,6 +140,10 @@ async def call_agent_tool(base_url: str, token: str, name: str, args: dict) -> s
             resp = await client.post(f"{base_url}/api/agent-tools/bgp-prefixes", headers=headers, json=args)
         elif name == "consultar_log_equipamento":
             resp = await client.post(f"{base_url}/api/agent-tools/device-logs", headers=headers, json=args)
+        elif name == "consultar_configuracao_interface":
+            resp = await client.post(f"{base_url}/api/agent-tools/interface-config", headers=headers, json=args)
+        elif name == "consultar_arp_interface":
+            resp = await client.post(f"{base_url}/api/agent-tools/interface-arp", headers=headers, json=args)
         else:
             return f"Ferramenta desconhecida: {name}"
 
