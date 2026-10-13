@@ -216,6 +216,17 @@ def monthly_spend_usd(db: Session, client_name: str) -> float:
     return cost_usd(*row)
 
 
+def sse_data(text: str) -> str:
+    """Enquadra `text` como um (ou mais) campo(s) "data:" de SSE de verdade
+    -- uma quebra de linha DENTRO do valor (comum em saída de equipamento:
+    config, ARP, log) precisa virar uma linha "data: " própria por linha,
+    nunca uma quebra de linha crua dentro de um único campo, que não é SSE
+    válido e faz o consumidor (agente.js, e o bot do WhatsApp) perder tudo
+    depois da primeira linha -- confirmado ao vivo: uma resposta com bloco
+    de código saiu com as quebras de linha todas grudadas."""
+    return "".join(f"data: {line}\n" for line in text.split("\n")) + "\n"
+
+
 def check_budget(db: Session, agent_client: AgentClient) -> tuple[bool, float]:
     """Retorna (bloqueado, gasto_no_mes). Sem monthly_budget_usd configurado
     (None ou 0), nunca bloqueia."""
@@ -363,7 +374,7 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
                 f"para este cliente (gasto no mês: ${spent:.2f}). Fale com o administrador "
                 "do agente para revisar o limite."
             )
-            yield f"data: {msg}\n\n"
+            yield sse_data(msg)
             db.add(
                 AgentAuditLog(
                     client_name=client_name,
@@ -414,7 +425,7 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
                             # só que agora em vários pedaços conforme o modelo gera
                             # em vez de um único envio no final -- streaming de
                             # verdade em vez de só a aparência de stream.
-                            yield f"data: {event['text']}\n\n"
+                            yield sse_data(event["text"])
                         elif event["type"] == "final":
                             usage = event["usage"]
                             tool_calls = event["tool_calls"]
@@ -441,9 +452,9 @@ async def chat(req: ChatRequest, x_agent_token: str = Header(...)):
                 if sub_exceptions:
                     detail = " | ".join(f"{type(e).__name__}: {e}" for e in sub_exceptions)
                 error_message = detail[:500]
-                yield (
-                    "data: Desculpe, ocorreu um erro ao processar sua pergunta. "
-                    "Tente novamente em instantes.\n\n"
+                yield sse_data(
+                    "Desculpe, ocorreu um erro ao processar sua pergunta. "
+                    "Tente novamente em instantes."
                 )
         finally:
             duration_ms = int((time.monotonic() - start) * 1000)
