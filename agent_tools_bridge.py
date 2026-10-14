@@ -28,6 +28,34 @@ AGENT_TOOLS_DEFS = [
         },
     },
     {
+        "name": "buscar_interface_por_descricao",
+        "description": (
+            "Busca (sem abrir SSH -- usa o mesmo cache de "
+            "listar_interfaces_equipamento) por um TRECHO de descrição de "
+            "interface em TODOS os hosts já cacheados de uma vez, sem "
+            "precisar saber de antemão em qual host/local está. Use isso "
+            "PRIMEIRO quando o pedido descrever um circuito/porta pelo "
+            "apelido dele sem dizer o host (ex: 'a fibra da travessia "
+            "parece ter rompido' -- sem dizer qual equipamento). Pode "
+            "retornar MAIS DE UM resultado (ex: os dois lados de uma "
+            "travessia de fibra, cada um num switch diferente) -- nesse "
+            "caso considere todos, não só o primeiro. Lista vazia = "
+            "nenhuma interface cacheada bate com esse trecho; tente um "
+            "trecho mais curto/genérico antes de desistir (ex: 'travessia' "
+            "em vez de 'fibra da travessia')."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Trecho da descrição da porta (ex: 'travessia', 'proxmox')",
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
         "name": "listar_interfaces_equipamento",
         "description": (
             "Lista as interfaces de um equipamento com IP, descrição (ex: "
@@ -463,6 +491,8 @@ async def call_agent_tool(base_url: str, token: str, name: str, args: dict) -> s
     async with httpx.AsyncClient(timeout=75) as client:
         if name == "consultar_funcoes_equipamento":
             resp = await client.get(f"{base_url}/api/agent-tools/host-functions/{args['hostid']}", headers=headers)
+        elif name == "buscar_interface_por_descricao":
+            resp = await client.post(f"{base_url}/api/agent-tools/search-interfaces", headers=headers, json=args)
         elif name == "listar_interfaces_equipamento":
             resp = await client.get(f"{base_url}/api/agent-tools/interfaces/{args['hostid']}", headers=headers)
         elif name == "listar_rotas_estaticas":
