@@ -6,6 +6,28 @@ import httpx
 
 AGENT_TOOLS_DEFS = [
     {
+        "name": "consultar_funcoes_equipamento",
+        "description": (
+            "Consulta (sem abrir SSH -- só lê um cadastro no Zabbix) quais "
+            "funções um equipamento exerce, ex: ['BGP','PPPOE'] ou "
+            "['SWITCH']. Um mesmo equipamento (NE8000, Mikrotik, ...) pode "
+            "exercer mais de uma função ao mesmo tempo. Use isso quando a "
+            "busca por nome de host trouxer MAIS DE UM candidato (ex: "
+            "'Castelo' bate com um roteador BGP/PPPoE e um switch de "
+            "acesso) pra escolher o certo antes de prosseguir, em vez de "
+            "adivinhar só pelo nome. Lista vazia = função não cadastrada "
+            "pra esse host ainda, não é erro -- nesse caso, use o nome do "
+            "host como contexto (ex: prefixo 'BGP-') em vez de desistir."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
+        },
+    },
+    {
         "name": "listar_interfaces_equipamento",
         "description": (
             "Lista as interfaces de um equipamento com IP, descrição (ex: "
@@ -336,6 +358,36 @@ AGENT_TOOLS_DEFS = [
         },
     },
     {
+        "name": "consultar_rota_destino",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a rota de melhor match pra "
+            "um IP específico -- de QUALQUER protocolo (BGP, OSPF, "
+            "estática, etc), não só estática. Use destination='0.0.0.0' "
+            "pra achar a ROTA DEFAULT do equipamento (0.0.0.0 é sempre o "
+            "pior/mais genérico match, então a rota retornada é sempre a "
+            "default). Diferente de listar_rotas_estaticas (cache, só "
+            "mostra rotas ESTÁTICAS) -- a rota default de um roteador de "
+            "borda é normalmente aprendida via BGP do provedor de trânsito, "
+            "não estática, e por isso nunca aparece em "
+            "listar_rotas_estaticas. Depois de achar o NextHop aqui, pra "
+            "identificar QUEM é esse vizinho (ex: qual provedor de "
+            "trânsito/\"upload\"), chame consultar_configuracao_bgp e "
+            "procure 'peer <NextHop> description ...'. Só aceita IP puro "
+            "(sem /máscara). Só Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+                "destination": {
+                    "type": "string",
+                    "description": "IP de destino, ou '0.0.0.0' pra achar a rota default",
+                },
+            },
+            "required": ["hostid", "destination"],
+        },
+    },
+    {
         "name": "consultar_log_equipamento",
         "description": (
             "Consulta AO VIVO (abre SSH na hora) o log do próprio equipamento, "
@@ -409,7 +461,9 @@ async def call_agent_tool(base_url: str, token: str, name: str, args: dict) -> s
     # completa) que agora pedem read_timeout=60 pro netmiko do lado do
     # map/ -- o HTTP desistia antes do SSH terminar de paginar a saída.
     async with httpx.AsyncClient(timeout=75) as client:
-        if name == "listar_interfaces_equipamento":
+        if name == "consultar_funcoes_equipamento":
+            resp = await client.get(f"{base_url}/api/agent-tools/host-functions/{args['hostid']}", headers=headers)
+        elif name == "listar_interfaces_equipamento":
             resp = await client.get(f"{base_url}/api/agent-tools/interfaces/{args['hostid']}", headers=headers)
         elif name == "listar_rotas_estaticas":
             resp = await client.get(f"{base_url}/api/agent-tools/routes/{args['hostid']}", headers=headers)
@@ -447,6 +501,8 @@ async def call_agent_tool(base_url: str, token: str, name: str, args: dict) -> s
             resp = await client.post(f"{base_url}/api/agent-tools/vlan-summary", headers=headers, json=args)
         elif name == "consultar_configuracao_completa":
             resp = await client.post(f"{base_url}/api/agent-tools/full-config", headers=headers, json=args)
+        elif name == "consultar_rota_destino":
+            resp = await client.post(f"{base_url}/api/agent-tools/route-lookup", headers=headers, json=args)
         elif name == "consultar_log_equipamento":
             resp = await client.post(f"{base_url}/api/agent-tools/device-logs", headers=headers, json=args)
         elif name == "consultar_configuracao_interface":
