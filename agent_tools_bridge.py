@@ -264,6 +264,78 @@ AGENT_TOOLS_DEFS = [
         },
     },
     {
+        "name": "consultar_status_interface",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) o status operacional "
+            "detalhado de UMA interface: se está UP/DOWN física e por "
+            "protocolo, há quanto tempo, modo trunk/access, velocidade, "
+            "tráfego dos últimos 300s (bits/sec, pacotes/sec) e erros. "
+            "Diferente de consultar_configuracao_interface (configuração "
+            "estática) e consultar_sinal_optico (sinal óptico). Só Huawei "
+            "por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+                "interface": {
+                    "type": "string",
+                    "description": "Nome exato da interface, como retornado por listar_interfaces_equipamento",
+                },
+            },
+            "required": ["hostid", "interface"],
+        },
+    },
+    {
+        "name": "consultar_mac_por_vlan",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a tabela de endereços MAC "
+            "aprendidos numa VLAN específica: MAC, tipo (dynamic/static) e "
+            "de qual interface foi aprendido. Só Huawei por enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+                "vlan_id": {"type": "string", "description": "Número da VLAN"},
+            },
+            "required": ["hostid", "vlan_id"],
+        },
+    },
+    {
+        "name": "listar_vlans",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) todas as VLANs criadas no "
+            "equipamento (estáticas, dinâmicas e reservadas). Só Huawei por "
+            "enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
+        },
+    },
+    {
+        "name": "consultar_configuracao_completa",
+        "description": (
+            "Consulta AO VIVO (abre SSH na hora) a configuração COMPLETA do "
+            "equipamento: VLANs, interfaces e descrições, IPs, roteamento, "
+            "filtros, BGP, etc. Saída pode ser bem longa -- prefira "
+            "consultar_configuracao_bgp ou consultar_configuracao_interface "
+            "quando só precisar de uma parte específica. Só Huawei por "
+            "enquanto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hostid": {"type": "string", "description": "hostid do Zabbix"},
+            },
+            "required": ["hostid"],
+        },
+    },
+    {
         "name": "consultar_log_equipamento",
         "description": (
             "Consulta AO VIVO (abre SSH na hora) o log do próprio equipamento, "
@@ -364,6 +436,14 @@ async def call_agent_tool(base_url: str, token: str, name: str, args: dict) -> s
             resp = await client.post(f"{base_url}/api/agent-tools/pppoe-pool-usage", headers=headers, json=args)
         elif name == "consultar_falha_autenticacao_pppoe":
             resp = await client.post(f"{base_url}/api/agent-tools/pppoe-aaa-fail-record", headers=headers, json=args)
+        elif name == "consultar_status_interface":
+            resp = await client.post(f"{base_url}/api/agent-tools/interface-status", headers=headers, json=args)
+        elif name == "consultar_mac_por_vlan":
+            resp = await client.post(f"{base_url}/api/agent-tools/mac-address-by-vlan", headers=headers, json=args)
+        elif name == "listar_vlans":
+            resp = await client.post(f"{base_url}/api/agent-tools/vlan-summary", headers=headers, json=args)
+        elif name == "consultar_configuracao_completa":
+            resp = await client.post(f"{base_url}/api/agent-tools/full-config", headers=headers, json=args)
         elif name == "consultar_log_equipamento":
             resp = await client.post(f"{base_url}/api/agent-tools/device-logs", headers=headers, json=args)
         elif name == "consultar_configuracao_interface":
