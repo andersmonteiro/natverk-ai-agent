@@ -405,7 +405,10 @@ def is_agent_tool(name: str) -> bool:
 
 async def call_agent_tool(base_url: str, token: str, name: str, args: dict) -> str:
     headers = {"Authorization": f"Bearer {token}"}
-    async with httpx.AsyncClient(timeout=15) as client:
+    # 15s não bastava pros comandos de saída grande (sessões PPPoE, config
+    # completa) que agora pedem read_timeout=60 pro netmiko do lado do
+    # map/ -- o HTTP desistia antes do SSH terminar de paginar a saída.
+    async with httpx.AsyncClient(timeout=75) as client:
         if name == "listar_interfaces_equipamento":
             resp = await client.get(f"{base_url}/api/agent-tools/interfaces/{args['hostid']}", headers=headers)
         elif name == "listar_rotas_estaticas":
@@ -458,6 +461,21 @@ async def call_agent_tool(base_url: str, token: str, name: str, args: dict) -> s
             return f"Erro: {resp.json().get('error', resp.text)}"
         except Exception:
             return f"Erro HTTP {resp.status_code}: {resp.text[:300]}"
+    # As rotas que encapsulam saída crua de equipamento devolvem
+    # {"output": "..."} -- sem desembrulhar aqui, o modelo recebia o JSON
+    # inteiro como texto (chaves + aspas + \n escapado em vez de quebra de
+    # linha real), o que tanto desperdiça tokens quanto atrapalha a
+    # instrução do system prompt de reproduzir a saída verbatim num bloco
+    # de código. listar_interfaces_equipamento/listar_rotas_estaticas (e
+    # user-by-phone) têm um schema de resposta diferente (sem "output") e
+    # continuam passando como JSON de propósito -- o modelo precisa da
+    # estrutura deles, não é texto de CLI.
+    try:
+        parsed = resp.json()
+    except Exception:
+        return resp.text
+    if isinstance(parsed, dict) and "output" in parsed:
+        return parsed["output"]
     return resp.text
 
 
