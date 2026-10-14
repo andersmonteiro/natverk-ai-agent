@@ -30,10 +30,12 @@ AGENT_TOOLS_DEFS = [
     {
         "name": "buscar_interface_por_descricao",
         "description": (
-            "Busca (sem abrir SSH -- usa o mesmo cache de "
-            "listar_interfaces_equipamento) por um TRECHO de descrição de "
-            "interface em TODOS os hosts já cacheados de uma vez, sem "
-            "precisar saber de antemão em qual host/local está. Use isso "
+            "Busca (sem abrir SSH) por um TRECHO de descrição/apelido de "
+            "circuito em TODOS os hosts de uma vez, sem precisar saber de "
+            "antemão em qual host/local está -- primeiro checa os apelidos "
+            "cadastrados manualmente pelo operador (resolução exata), e só "
+            "se nenhum bater cai pra busca por trecho na descrição real da "
+            "porta (cache de listar_interfaces_equipamento). Use isso "
             "PRIMEIRO quando o pedido descrever um circuito/porta pelo "
             "apelido dele sem dizer o host (ex: 'a fibra da travessia "
             "parece ter rompido' -- sem dizer qual equipamento). Pode "
